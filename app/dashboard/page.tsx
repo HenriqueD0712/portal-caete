@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     supabase.from("profiles")
       .select("nome, nome_projeto, progresso_criativo, progresso_executivo, data_entrega_criativo, data_entrega_executivo")
       .eq("id", user!.id).single(),
-    supabase.from("aprovacoes").select("id, etapa, status, comentario, updated_at").eq("cliente_id", user!.id).order("created_at"),
+    supabase.from("aprovacoes").select("id, etapa, status, comentario, updated_at, bloqueado").eq("cliente_id", user!.id).order("created_at"),
     supabase.from("cronograma").select("titulo, data_prevista, concluido").eq("cliente_id", user!.id).eq("concluido", false).order("data_prevista").limit(3),
     supabase.from("arquivos").select("url, nome").eq("cliente_id", user!.id).eq("categoria", "destaque").order("created_at", { ascending: false }).limit(1),
   ]);

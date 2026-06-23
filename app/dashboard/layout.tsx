@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
+export const dynamic = "force-dynamic";
 import { createClient } from "@/src/lib/supabase/server";
 import { redirect } from "next/navigation";
 

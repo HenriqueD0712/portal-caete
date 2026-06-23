@@ -42,6 +42,20 @@ export async function updateProfile(id: string, data: {
   revalidatePath("/admin");
 }
 
+export async function changeClientPassword(id: string, password: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(id, { password });
+  if (error) throw new Error(error.message);
+}
+
+export async function adminToggleBloqueio(id: string, bloqueado: boolean, clienteId: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await admin.from("aprovacoes").update({ bloqueado }).eq("id", id);
+  revalidatePath(`/admin/clientes/${clienteId}`);
+}
+
 export async function deleteClient(id: string) {
   await checkAdmin();
   const admin = createAdminClient();

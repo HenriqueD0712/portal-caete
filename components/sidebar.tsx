@@ -81,7 +81,7 @@ export function Sidebar({
                 ...item,
                 subItems: subcategoriasExecutivo.map((sub) => ({
                   id: sub,
-                  label: sub.charAt(0).toUpperCase() + sub.slice(1),
+                  label: sub.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
                   href: `/dashboard/executivo/${sub}`,
                 })),
               };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, Clock, AlertCircle, Check, MessageSquare, Send, RotateCcw } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Check, MessageSquare, Send, RotateCcw, Lock } from "lucide-react";
 import { clienteResponderAprovacao } from "@/app/actions/aprovacoes";
 import { cn } from "@/src/lib/utils";
 
@@ -11,6 +11,7 @@ type Aprovacao = {
   status: string;
   comentario?: string | null;
   updated_at: string;
+  bloqueado?: boolean | null;
 };
 
 function AprovacaoItem({ a }: { a: Aprovacao }) {
@@ -75,13 +76,19 @@ function AprovacaoItem({ a }: { a: Aprovacao }) {
         </div>
 
         {!isPendente && (
-          <button
-            onClick={() => { setStatus("pendente"); setShowForm(false); }}
-            disabled={isPending}
-            className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors shrink-0 disabled:opacity-50"
-          >
-            <RotateCcw size={11} /> Alterar
-          </button>
+          a.bloqueado ? (
+            <span className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] shrink-0 select-none" title="Aguardando liberação do escritório">
+              <Lock size={11} /> Bloqueado
+            </span>
+          ) : (
+            <button
+              onClick={() => { setStatus("pendente"); setShowForm(false); }}
+              disabled={isPending}
+              className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors shrink-0 disabled:opacity-50"
+            >
+              <RotateCcw size={11} /> Alterar
+            </button>
+          )
         )}
       </div>
 

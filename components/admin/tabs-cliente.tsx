@@ -3,15 +3,17 @@
 import { useState, useTransition, useRef, useCallback } from "react";
 import {
   User, FileText, Image as ImageIcon, Video, Calendar, BarChart2,
-  CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2
+  CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2,
+  Lock, Unlock, KeyRound,
 } from "lucide-react";
 import {
   updateProfile, saveArquivo, deleteArquivo,
   saveCronograma, updateCronograma, deleteCronograma,
   saveProgresso, updateProgresso, deleteProgresso,
-  saveAprovacao, updateAprovacao, deleteAprovacao,
+  saveAprovacao, updateAprovacao, deleteAprovacao, adminToggleBloqueio,
   saveReuniao, updateReuniao, deleteReuniao,
   saveCuidado, updateCuidado, deleteCuidado,
+  changeClientPassword,
 } from "@/app/admin/actions";
 
 // ── Types ──────────────────────────────────────────────────
@@ -24,7 +26,7 @@ type Profile = {
 type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string };
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
-type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string };
+type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string; bloqueado?: boolean };
 type Reuniao = { id: string; data_reuniao: string; assunto: string; ata_texto?: string; ata_url?: string; ata_nome?: string };
 type Cuidado = { id: string; material: string; descricao: string; ordem: number };
 
@@ -438,7 +440,38 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               : <><Upload size={13} /> {destaqueAtual ? "Trocar imagem" : "Selecionar imagem"}</>}
           </Btn>
         </Card>
+
+        <CardAlterarSenha />
       </div>
+    );
+  }
+
+  // ── TAB: Perfil (senha) ───────────────────────────────────
+  function CardAlterarSenha() {
+    const [senha, setSenha] = useState("");
+    const [ok, setOk] = useState(false);
+    const [erro, setErro] = useState("");
+
+    return (
+      <Card>
+        <SectionTitle><KeyRound size={14} className="inline mr-1" />Alterar senha do cliente</SectionTitle>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <Input label="Nova senha" type="password" value={senha} onChange={(e) => { setSenha(e.target.value); setOk(false); setErro(""); }} placeholder="Mínimo 6 caracteres" />
+          </div>
+          <Btn disabled={isPending || senha.length < 6} onClick={() => {
+            run(async () => {
+              try {
+                await changeClientPassword(clienteId, senha);
+                setOk(true); setSenha(""); setTimeout(() => setOk(false), 3000);
+              } catch (e: unknown) { setErro(e instanceof Error ? e.message : "Erro ao alterar senha."); }
+            });
+          }}>
+            {ok ? <><Check size={13} /> Alterada!</> : "Salvar"}
+          </Btn>
+        </div>
+        {erro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md mt-2">{erro}</p>}
+      </Card>
     );
   }
 
@@ -753,7 +786,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                     {a.comentario && <p className="text-xs text-[var(--muted-foreground)] italic">"{a.comentario}"</p>}
                     <p className="text-xs text-[var(--muted-foreground)] mt-1">Atualizado: {new Date(a.updated_at).toLocaleDateString("pt-BR")}</p>
                   </div>
-                  <div className="flex gap-1 flex-wrap">
+                  <div className="flex gap-1 flex-wrap items-center">
                     {["pendente", "aprovado", "revisao"].map(s => (
                       <button key={s} disabled={isPending || a.status === s}
                         onClick={() => run(() => updateAprovacao(a.id, s, clienteId))}
@@ -761,6 +794,13 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                         {statusLabels[s]}
                       </button>
                     ))}
+                    <button
+                      disabled={isPending}
+                      title={a.bloqueado ? "Liberar alteração pelo cliente" : "Bloquear alteração pelo cliente"}
+                      onClick={() => run(() => adminToggleBloqueio(a.id, !a.bloqueado, clienteId))}
+                      className={`p-1.5 rounded-md border transition-colors disabled:opacity-40 ${a.bloqueado ? "border-amber-400 text-amber-600 hover:bg-amber-50" : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--creme-escuro)]"}`}>
+                      {a.bloqueado ? <Lock size={12} /> : <Unlock size={12} />}
+                    </button>
                     <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteAprovacao(a.id, clienteId))}><Trash2 size={12} /></Btn>
                   </div>
                 </div>
