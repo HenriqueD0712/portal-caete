@@ -28,6 +28,7 @@ export const navigationSections: NavSection[] = [
     label: "Informações",
     items: [
       { id: "orcamentos", label: "Orçamentos", href: "/dashboard/orcamentos" },
+      { id: "contrato", label: "Contrato", href: "/dashboard/contrato" },
       { id: "reunioes", label: "Reuniões", href: "/dashboard/reunioes" },
       { id: "cuidados", label: "Cuidados", href: "/dashboard/cuidados" },
     ],

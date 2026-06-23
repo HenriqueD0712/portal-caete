@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Home, FileText, Eye, Building2, Shield, MessageSquare,
-  Table2, ChevronDown, ChevronRight, Menu, X, LogOut, Layers,
+  Table2, ChevronDown, ChevronRight, Menu, X, LogOut, Layers, ScrollText,
 } from "lucide-react";
 import { navigationSections } from "@/src/config/navigation";
 import { logout } from "@/app/actions/auth";
@@ -18,6 +18,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   executivo: Building2,
   planilhas: Table2,
   orcamentos: FileText,
+  contrato: ScrollText,
   reunioes: MessageSquare,
   cuidados: Shield,
 };
