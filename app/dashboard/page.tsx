@@ -2,9 +2,9 @@ import { createClient } from "@/src/lib/supabase/server";
 import Link from "next/link";
 import {
   FileText, Calendar, Eye, Building2,
-  Shield, MessageSquare, Table2, ChevronRight,
-  CheckCircle2, Clock, AlertCircle, Layers,
+  Shield, MessageSquare, Table2, ChevronRight, Layers,
 } from "lucide-react";
+import { AprovacoesCliente } from "@/components/aprovacoes-cliente";
 
 const navCards = [
   { id: "apresentacao3d", label: "Apresentação 3D", href: "/dashboard/midias/visual",    icon: Layers,        desc: "Renders e visualizações" },
@@ -16,11 +16,6 @@ const navCards = [
   { id: "cuidados",       label: "Cuidados",         href: "/dashboard/cuidados",         icon: Shield,        desc: "Guia de materiais" },
 ];
 
-const statusConfig = {
-  aprovado: { label: "Aprovado",     icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50",  border: "border-emerald-200" },
-  pendente: { label: "Aguardando",   icon: Clock,        color: "text-amber-600",   bg: "bg-amber-50",    border: "border-amber-200"   },
-  revisao:  { label: "Em revisão",   icon: AlertCircle,  color: "text-[var(--terracota)]", bg: "bg-orange-50", border: "border-orange-200" },
-};
 
 function formatDate(d: string | null | undefined) {
   if (!d) return null;
@@ -35,7 +30,7 @@ export default async function DashboardPage() {
     supabase.from("profiles")
       .select("nome, nome_projeto, progresso_criativo, progresso_executivo, data_entrega_criativo, data_entrega_executivo")
       .eq("id", user!.id).single(),
-    supabase.from("aprovacoes").select("etapa, status, comentario").eq("cliente_id", user!.id),
+    supabase.from("aprovacoes").select("id, etapa, status, comentario, updated_at").eq("cliente_id", user!.id).order("created_at"),
     supabase.from("cronograma").select("titulo, data_prevista, concluido").eq("cliente_id", user!.id).eq("concluido", false).order("data_prevista").limit(3),
     supabase.from("arquivos").select("url, nome").eq("cliente_id", user!.id).eq("categoria", "destaque").order("created_at", { ascending: false }).limit(1),
   ]);
@@ -138,30 +133,8 @@ export default async function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Aprovações</h2>
-          <span />
         </div>
-        {aprovacoes.length === 0 ? (
-          <div className="bg-white rounded-xl border border-[var(--border)] px-5 py-6 text-center">
-            <p className="text-sm text-[var(--muted-foreground)]">Nenhuma aprovação pendente no momento.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {aprovacoes.map((a) => {
-              const cfg = statusConfig[a.status as keyof typeof statusConfig] ?? statusConfig.pendente;
-              const Icon = cfg.icon;
-              return (
-                <div key={a.etapa} className={`flex items-start gap-3 px-4 py-3.5 rounded-xl border ${cfg.bg} ${cfg.border}`}>
-                  <Icon size={18} className={`${cfg.color} mt-0.5 shrink-0`} />
-                  <div className="min-w-0">
-                    <p className="text-xs text-[var(--muted-foreground)] capitalize">{a.etapa}</p>
-                    <p className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</p>
-                    {a.comentario && <p className="text-xs text-[var(--muted-foreground)] mt-1 truncate">"{a.comentario}"</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <AprovacoesCliente aprovacoes={aprovacoes} />
       </section>
 
       {/* ── Próximas Entregas ── */}
