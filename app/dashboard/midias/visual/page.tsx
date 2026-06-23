@@ -9,7 +9,7 @@ export default async function MidiasVisualPage() {
     .from("arquivos")
     .select("id, nome, descricao, url")
     .eq("cliente_id", user!.id)
-    .eq("categoria", "visual")
+    .eq("categoria", "visual_3d")
     .order("created_at", { ascending: false });
 
   return (
