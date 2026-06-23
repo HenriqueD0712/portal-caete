@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { getAllClients } from "./actions";
+import { getAllClients } from "./queries";
 import { NovoClienteModal } from "@/components/admin/novo-cliente-modal";
 import { Users, FolderOpen, Calendar } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const clientes = await getAllClients();

@@ -4,13 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users, LogOut, Menu, X, ExternalLink } from "lucide-react";
+import { Users, LogOut, Menu, X, ExternalLink } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { cn } from "@/src/lib/utils";
 
 const links = [
-  { href: "/admin", label: "Visão Geral", icon: LayoutDashboard },
-  { href: "/admin/clientes", label: "Clientes", icon: Users },
+  { href: "/admin", label: "Clientes", icon: Users },
 ];
 
 export function AdminSidebar() {
