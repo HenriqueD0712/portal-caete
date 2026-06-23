@@ -13,13 +13,17 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nome, nome_projeto")
+    .select("nome, nome_projeto, subcategorias_executivo")
     .eq("id", user.id)
     .single();
 
   return (
     <div className="flex min-h-screen bg-[var(--creme)]">
-      <Sidebar nomeProjeto={profile?.nome_projeto ?? undefined} nome={profile?.nome ?? undefined} />
+      <Sidebar
+        nomeProjeto={profile?.nome_projeto ?? undefined}
+        nome={profile?.nome ?? undefined}
+        subcategoriasExecutivo={(profile as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? []}
+      />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 p-6 lg:p-8 lg:pl-8 pl-16">
           {children}

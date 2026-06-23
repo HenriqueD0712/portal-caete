@@ -1,65 +1,37 @@
-export interface SubMenuItem {
+export interface NavItem {
   id: string;
   label: string;
   href: string;
+  subItems?: NavItem[];
+  isDynamic?: boolean;
 }
 
-export interface MenuItem {
+export interface NavSection {
   id: string;
   label: string;
-  href: string;
-  subItems?: SubMenuItem[];
+  items: NavItem[];
 }
 
-export const navigation: MenuItem[] = [
+export const navigationSections: NavSection[] = [
   {
-    id: "orcamentos",
-    label: "Orçamentos",
-    href: "/dashboard/orcamentos",
-  },
-  {
-    id: "cronograma",
-    label: "Cronograma",
-    href: "/dashboard/cronograma",
-  },
-  {
-    id: "progresso",
-    label: "Progresso",
-    href: "/dashboard/progresso",
-  },
-  {
-    id: "midias",
-    label: "Mídias",
-    href: "/dashboard/midias",
-    subItems: [
-      { id: "visual", label: "Visual 3D", href: "/dashboard/midias/visual" },
+    id: "entregas",
+    label: "Entregas",
+    items: [
+      { id: "apresentacao3d", label: "Apresentação 3D", href: "/dashboard/midias/visual" },
       { id: "panoramas", label: "Panoramas 360°", href: "/dashboard/midias/panoramas" },
+      { id: "executivo", label: "Executivo", href: "/dashboard/executivo", isDynamic: true },
+      { id: "planilhas", label: "Planilhas", href: "/dashboard/planilhas" },
     ],
   },
   {
-    id: "executivo",
-    label: "Executivo",
-    href: "/dashboard/executivo",
-    subItems: [
-      { id: "obra", label: "Obra", href: "/dashboard/executivo/obra" },
-      { id: "marcenaria", label: "Marcenaria", href: "/dashboard/executivo/marcenaria" },
-      { id: "marmoraria", label: "Marmoraria", href: "/dashboard/executivo/marmoraria" },
-      // Para adicionar novo submenu: copie a linha acima, mude o id, label e href
+    id: "informacoes",
+    label: "Informações",
+    items: [
+      { id: "orcamentos", label: "Orçamentos", href: "/dashboard/orcamentos" },
+      { id: "reunioes", label: "Reuniões", href: "/dashboard/reunioes" },
+      { id: "cuidados", label: "Cuidados", href: "/dashboard/cuidados" },
     ],
-  },
-  {
-    id: "cuidados",
-    label: "Cuidados",
-    href: "/dashboard/cuidados",
-  },
-  {
-    id: "reunioes",
-    label: "Reuniões",
-    href: "/dashboard/reunioes",
-  },
-  {
-    id: "planilhas",
-    label: "Planilhas",
-    href: "/dashboard/planilhas",
   },
 ];
+
+export const navigation = navigationSections.flatMap((s) => s.items);

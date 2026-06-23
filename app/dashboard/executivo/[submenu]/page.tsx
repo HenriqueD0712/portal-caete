@@ -1,25 +1,31 @@
 import { createClient } from "@/src/lib/supabase/server";
-import { navigation } from "@/src/config/navigation";
 import { notFound } from "next/navigation";
 import { FileText, Download } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ submenu: string }>;
 }
 
-export async function generateStaticParams() {
-  const executivo = navigation.find((n) => n.id === "executivo");
-  return executivo?.subItems?.map((s) => ({ submenu: s.id })) ?? [];
-}
-
 export default async function ExecutivoSubmenuPage({ params }: Props) {
   const { submenu } = await params;
-  const executivo = navigation.find((n) => n.id === "executivo");
-  const item = executivo?.subItems?.find((s) => s.id === submenu);
-  if (!item) notFound();
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("subcategorias_executivo")
+    .eq("id", user!.id)
+    .single();
+
+  const subcategorias: string[] =
+    (profileData as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? [];
+
+  if (!subcategorias.includes(submenu)) notFound();
+
+  const label = submenu.charAt(0).toUpperCase() + submenu.slice(1);
 
   const { data: arquivos } = await supabase
     .from("arquivos")
@@ -32,13 +38,15 @@ export default async function ExecutivoSubmenuPage({ params }: Props) {
     <div className="max-w-3xl space-y-6">
       <div>
         <p className="text-xs text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Executivo</p>
-        <h1 className="text-2xl font-semibold text-[var(--verde-escuro)]">{item.label}</h1>
+        <h1 className="text-2xl font-semibold text-[var(--verde-escuro)]">{label}</h1>
       </div>
 
       {!arquivos || arquivos.length === 0 ? (
         <div className="bg-white rounded-lg border border-[var(--border)] p-12 text-center">
           <FileText size={32} className="mx-auto text-[var(--muted-foreground)] mb-3" />
-          <p className="text-sm text-[var(--muted-foreground)]">Nenhum arquivo de {item.label.toLowerCase()} disponível ainda.</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Nenhum arquivo de {label.toLowerCase()} disponível ainda.
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
@@ -48,7 +56,9 @@ export default async function ExecutivoSubmenuPage({ params }: Props) {
                 <FileText size={16} className="text-[var(--terracota)] shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{arq.nome}</p>
-                  {arq.descricao && <p className="text-xs text-[var(--muted-foreground)] truncate">{arq.descricao}</p>}
+                  {arq.descricao && (
+                    <p className="text-xs text-[var(--muted-foreground)] truncate">{arq.descricao}</p>
+                  )}
                   <p className="text-xs text-[var(--muted-foreground)]">
                     {new Date(arq.created_at).toLocaleDateString("pt-BR")}
                   </p>

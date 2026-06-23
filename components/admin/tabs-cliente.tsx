@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useCallback } from "react";
 import {
   User, FileText, Image as ImageIcon, Video, Calendar, BarChart2,
-  CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X
+  CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2
 } from "lucide-react";
 import {
   updateProfile, saveArquivo, deleteArquivo,
@@ -19,6 +19,7 @@ type Profile = {
   id: string; nome: string; nome_projeto?: string; google_sheets_url?: string;
   progresso_criativo?: number; progresso_executivo?: number;
   data_entrega_criativo?: string; data_entrega_executivo?: string;
+  subcategorias_executivo?: string[];
 };
 type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string };
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
@@ -240,7 +241,7 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
 }
 
 // ── Arquivo Upload (documentos) ────────────────────────────
-function ArquivoUpload({ clienteId }: { clienteId: string }) {
+function ArquivoUpload({ clienteId, subcategoriasExecutivo = [] }: { clienteId: string; subcategoriasExecutivo?: string[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -251,7 +252,7 @@ function ArquivoUpload({ clienteId }: { clienteId: string }) {
   const [erro, setErro] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const categorias = ["orcamento", "obra", "marcenaria", "marmoraria", "ata", "destaque", "outro"];
+  const categorias = ["orcamento", "ata", "destaque", "outro", ...subcategoriasExecutivo];
 
   async function upload() {
     if (!file) return;
@@ -322,6 +323,7 @@ const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "panoramas", label: "Panoramas 360°", icon: ImageIcon },
   { id: "visual3d", label: "Visual 3D", icon: Video },
+  { id: "executivo_subs", label: "Executivo", icon: Building2 },
   { id: "arquivos", label: "Documentos", icon: FileText },
   { id: "cronograma", label: "Cronograma", icon: Calendar },
   { id: "progresso", label: "Progresso", icon: BarChart2 },
@@ -495,7 +497,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
       <div className="space-y-4">
         <Card>
           <SectionTitle>Enviar documento</SectionTitle>
-          <ArquivoUpload clienteId={clienteId} />
+          <ArquivoUpload clienteId={clienteId} subcategoriasExecutivo={data.profile.subcategorias_executivo ?? []} />
         </Card>
 
         {docs.length > 0 && (
@@ -810,10 +812,79 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
+  // ── TAB: Executivo (subcategorias) ────────────────────────
+  function TabExecutivoSubs() {
+    const [subs, setSubs] = useState<string[]>(data.profile.subcategorias_executivo ?? []);
+    const [novaSub, setNovaSub] = useState("");
+    const [saved, setSaved] = useState(false);
+
+    function add() {
+      const slug = novaSub.toLowerCase().trim().replace(/\s+/g, "_");
+      if (!slug || subs.includes(slug)) return;
+      setSubs([...subs, slug]);
+      setNovaSub("");
+    }
+
+    function remove(sub: string) {
+      setSubs(subs.filter((s) => s !== sub));
+    }
+
+    function save() {
+      run(async () => {
+        await updateProfile(clienteId, { subcategorias_executivo: subs });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      });
+    }
+
+    return (
+      <div className="space-y-4 max-w-lg">
+        <Card>
+          <SectionTitle>Subcategorias do Executivo</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-4">
+            Crie subcategorias como "Obra", "Marcenaria", "Cozinha". Elas aparecem no menu lateral do cliente e permitem o upload de arquivos específicos.
+          </p>
+          <div className="flex gap-2 mb-4">
+            <Input
+              value={novaSub}
+              onChange={(e) => setNovaSub(e.target.value)}
+              placeholder="Ex: Obra, Cozinha, Suite..."
+              onKeyDown={(e) => e.key === "Enter" && add()}
+            />
+            <Btn onClick={add} disabled={!novaSub}>
+              <Plus size={13} /> Adicionar
+            </Btn>
+          </div>
+          {subs.length > 0 ? (
+            <ul className="space-y-1 mb-4">
+              {subs.map((sub) => (
+                <li key={sub} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">{sub.charAt(0).toUpperCase() + sub.slice(1)}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">/dashboard/executivo/{sub}</p>
+                  </div>
+                  <Btn variant="danger" onClick={() => remove(sub)}>
+                    <Trash2 size={12} />
+                  </Btn>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-[var(--muted-foreground)] italic mb-4">Nenhuma subcategoria criada ainda.</p>
+          )}
+          <Btn onClick={save} disabled={isPending}>
+            {saved ? <><Check size={13} /> Salvo!</> : <><Edit2 size={13} /> Salvar subcategorias</>}
+          </Btn>
+        </Card>
+      </div>
+    );
+  }
+
   const tabComponents: Record<string, React.ReactNode> = {
     perfil: <TabPerfil />,
     panoramas: <TabPanoramas />,
     visual3d: <TabVisual3D />,
+    executivo_subs: <TabExecutivoSubs />,
     arquivos: <TabArquivos />,
     cronograma: <TabCronograma />,
     progresso: <TabProgresso />,

@@ -1,21 +1,19 @@
 import { createClient } from "@/src/lib/supabase/server";
 import Link from "next/link";
 import {
-  FileText, Calendar, BarChart2, Eye, Building2,
+  FileText, Calendar, Eye, Building2,
   Shield, MessageSquare, Table2, ChevronRight,
   CheckCircle2, Clock, AlertCircle, Layers,
 } from "lucide-react";
 
 const navCards = [
-  { id: "orcamentos",  label: "Orçamentos",     href: "/dashboard/orcamentos",         icon: FileText,      desc: "Documentos e propostas" },
-  { id: "cronograma",  label: "Cronograma",      href: "/dashboard/cronograma",         icon: Calendar,      desc: "Datas de entrega" },
-  { id: "progresso",   label: "Progresso",       href: "/dashboard/progresso",          icon: BarChart2,     desc: "Etapas do projeto" },
-  { id: "visual",      label: "Visual 3D",       href: "/dashboard/midias/visual",      icon: Layers,        desc: "Renders e visualizações" },
-  { id: "panoramas",   label: "Panoramas 360°",  href: "/dashboard/midias/panoramas",   icon: Eye,           desc: "Ambientes em 360°" },
-  { id: "obra",        label: "Executivo",        href: "/dashboard/executivo/obra",     icon: Building2,     desc: "Obra, Marcenaria e Marmoraria" },
-  { id: "cuidados",    label: "Cuidados",         href: "/dashboard/cuidados",           icon: Shield,        desc: "Guia de materiais" },
-  { id: "reunioes",    label: "Reuniões",         href: "/dashboard/reunioes",           icon: MessageSquare, desc: "Atas e anotações" },
-  { id: "planilhas",   label: "Planilhas",        href: "/dashboard/planilhas",          icon: Table2,        desc: "Orçamentos detalhados" },
+  { id: "apresentacao3d", label: "Apresentação 3D", href: "/dashboard/midias/visual",    icon: Layers,        desc: "Renders e visualizações" },
+  { id: "panoramas",      label: "Panoramas 360°",  href: "/dashboard/midias/panoramas", icon: Eye,           desc: "Ambientes em 360°" },
+  { id: "executivo",      label: "Executivo",        href: "/dashboard/executivo",        icon: Building2,     desc: "Projetos e documentos técnicos" },
+  { id: "planilhas",      label: "Planilhas",        href: "/dashboard/planilhas",        icon: Table2,        desc: "Orçamentos detalhados" },
+  { id: "orcamentos",     label: "Orçamentos",       href: "/dashboard/orcamentos",       icon: FileText,      desc: "Documentos e propostas" },
+  { id: "reunioes",       label: "Reuniões",         href: "/dashboard/reunioes",         icon: MessageSquare, desc: "Atas e anotações" },
+  { id: "cuidados",       label: "Cuidados",         href: "/dashboard/cuidados",         icon: Shield,        desc: "Guia de materiais" },
 ];
 
 const statusConfig = {
@@ -80,9 +78,7 @@ export default async function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Progresso do Projeto</h2>
-          <Link href="/dashboard/progresso" className="text-xs text-[var(--terracota)] hover:underline flex items-center gap-1 font-medium">
-            Aprovações <ChevronRight size={12} />
-          </Link>
+          <span />
         </div>
         <div className="bg-white rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
           {/* Criativo */}
@@ -142,9 +138,7 @@ export default async function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Aprovações</h2>
-          <Link href="/dashboard/progresso" className="text-xs text-[var(--terracota)] hover:underline flex items-center gap-1 font-medium">
-            Ver detalhes <ChevronRight size={12} />
-          </Link>
+          <span />
         </div>
         {aprovacoes.length === 0 ? (
           <div className="bg-white rounded-xl border border-[var(--border)] px-5 py-6 text-center">

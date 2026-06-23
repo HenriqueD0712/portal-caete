@@ -33,6 +33,7 @@ export async function updateProfile(id: string, data: {
   progresso_executivo?: number;
   data_entrega_criativo?: string | null;
   data_entrega_executivo?: string | null;
+  subcategorias_executivo?: string[];
 }) {
   await checkAdmin();
   const admin = createAdminClient();
