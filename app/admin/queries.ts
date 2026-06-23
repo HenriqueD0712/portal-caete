@@ -9,7 +9,7 @@ async function checkAdmin() {
 
 export async function getAllClients() {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   const { data, error } = await admin
     .from("profiles")
     .select("id, nome, nome_projeto, google_sheets_url, created_at")
@@ -20,7 +20,7 @@ export async function getAllClients() {
 
 export async function getClientData(id: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados] = await Promise.all([
     admin.from("profiles").select("*").eq("id", id).single(),
     admin.from("arquivos").select("*").eq("cliente_id", id).neq("categoria", "panorama").order("created_at", { ascending: false }),

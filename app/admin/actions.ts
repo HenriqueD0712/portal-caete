@@ -15,7 +15,7 @@ async function checkAdmin() {
 // ── CLIENTES ───────────────────────────────────────────────
 export async function createNewClient(email: string, password: string, nome: string, nomeProjeto: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { nome },
   });
@@ -27,7 +27,7 @@ export async function createNewClient(email: string, password: string, nome: str
 
 export async function updateProfile(id: string, data: { nome?: string; nome_projeto?: string; google_sheets_url?: string }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("profiles").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${id}`);
   revalidatePath("/admin");
@@ -35,7 +35,7 @@ export async function updateProfile(id: string, data: { nome?: string; nome_proj
 
 export async function deleteClient(id: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.auth.admin.deleteUser(id);
   revalidatePath("/admin");
 }
@@ -45,7 +45,7 @@ export async function saveArquivo(clienteId: string, data: {
   nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number;
 }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("arquivos").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -53,7 +53,7 @@ export async function saveArquivo(clienteId: string, data: {
 export async function deleteArquivo(id: string, chave: string, clienteId: string) {
   await checkAdmin();
   try { await deleteFile(chave); } catch {}
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("arquivos").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -61,21 +61,21 @@ export async function deleteArquivo(id: string, chave: string, clienteId: string
 // ── CRONOGRAMA ─────────────────────────────────────────────
 export async function saveCronograma(clienteId: string, data: { titulo: string; descricao?: string; data_prevista: string }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cronograma").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function updateCronograma(id: string, data: Partial<{ titulo: string; descricao: string; data_prevista: string; concluido: boolean }>, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cronograma").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function deleteCronograma(id: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cronograma").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -83,21 +83,21 @@ export async function deleteCronograma(id: string, clienteId: string) {
 // ── PROGRESSO ──────────────────────────────────────────────
 export async function saveProgresso(clienteId: string, data: { etapa: string; item: string; percentual: number; status: string; ordem?: number }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("progresso").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function updateProgresso(id: string, data: Partial<{ item: string; percentual: number; status: string; ordem: number }>, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("progresso").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function deleteProgresso(id: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("progresso").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -105,21 +105,21 @@ export async function deleteProgresso(id: string, clienteId: string) {
 // ── APROVAÇÕES ─────────────────────────────────────────────
 export async function saveAprovacao(clienteId: string, etapa: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("aprovacoes").insert({ cliente_id: clienteId, etapa, status: "pendente" });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function updateAprovacao(id: string, status: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("aprovacoes").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function deleteAprovacao(id: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("aprovacoes").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -127,21 +127,21 @@ export async function deleteAprovacao(id: string, clienteId: string) {
 // ── REUNIÕES ───────────────────────────────────────────────
 export async function saveReuniao(clienteId: string, data: { data_reuniao: string; assunto: string; ata_texto?: string }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("reunioes").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function updateReuniao(id: string, data: Partial<{ data_reuniao: string; assunto: string; ata_texto: string }>, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("reunioes").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function deleteReuniao(id: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("reunioes").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
@@ -149,21 +149,21 @@ export async function deleteReuniao(id: string, clienteId: string) {
 // ── CUIDADOS ───────────────────────────────────────────────
 export async function saveCuidado(clienteId: string, data: { material: string; descricao: string; ordem?: number }) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cuidados").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function updateCuidado(id: string, data: Partial<{ material: string; descricao: string; ordem: number }>, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cuidados").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
 export async function deleteCuidado(id: string, clienteId: string) {
   await checkAdmin();
-  const admin = await createAdminClient();
+  const admin = createAdminClient();
   await admin.from("cuidados").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
