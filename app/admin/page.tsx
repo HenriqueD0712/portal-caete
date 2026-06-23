@@ -1,20 +1,52 @@
 import Link from "next/link";
-import { getAllClients } from "./queries";
+import { getAllClients, getTotalStorage } from "./queries";
 import { NovoClienteModal } from "@/components/admin/novo-cliente-modal";
-import { Users, FolderOpen, Calendar } from "lucide-react";
+import { Users, FolderOpen, Calendar, HardDrive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 MB";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
 export default async function AdminPage() {
-  const clientes = await getAllClients();
+  const [clientes, totalBytes] = await Promise.all([
+    getAllClients(),
+    getTotalStorage(),
+  ]);
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--verde-escuro)]">Clientes</h1>
-          <p className="text-sm text-[var(--muted-foreground)] mt-1">{clientes.length} cliente(s) cadastrado(s)</p>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white border border-[var(--border)] rounded-lg p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
+            <Users size={18} className="text-[var(--verde-escuro)]" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-[var(--verde-escuro)]">{clientes.length}</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Clientes cadastrados</p>
+          </div>
         </div>
+
+        <div className="bg-white border border-[var(--border)] rounded-lg p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
+            <HardDrive size={18} className="text-[var(--verde-escuro)]" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-[var(--verde-escuro)]">{formatBytes(totalBytes)}</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Armazenamento usado no R2</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Client list */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-[var(--verde-escuro)]">Clientes</h1>
         <NovoClienteModal />
       </div>
 

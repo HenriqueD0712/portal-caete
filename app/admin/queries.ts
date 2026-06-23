@@ -1,5 +1,33 @@
 import { createAdminClient, createClient } from "@/src/lib/supabase/server";
+import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { ADMIN_EMAIL } from "./config";
+
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+export async function getTotalStorage(): Promise<number> {
+  let totalBytes = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const res = await r2.send(new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      ContinuationToken: continuationToken,
+    }));
+    for (const obj of res.Contents ?? []) {
+      totalBytes += obj.Size ?? 0;
+    }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return totalBytes;
+}
 
 async function checkAdmin() {
   const supabase = await createClient();
