@@ -25,7 +25,15 @@ export async function createNewClient(email: string, password: string, nome: str
   return data.user.id;
 }
 
-export async function updateProfile(id: string, data: { nome?: string; nome_projeto?: string; google_sheets_url?: string }) {
+export async function updateProfile(id: string, data: {
+  nome?: string;
+  nome_projeto?: string;
+  google_sheets_url?: string;
+  progresso_criativo?: number;
+  progresso_executivo?: number;
+  data_entrega_criativo?: string | null;
+  data_entrega_executivo?: string | null;
+}) {
   await checkAdmin();
   const admin = createAdminClient();
   await admin.from("profiles").update(data).eq("id", id);

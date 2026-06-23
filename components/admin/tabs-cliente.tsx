@@ -15,7 +15,11 @@ import {
 } from "@/app/admin/actions";
 
 // ── Types ──────────────────────────────────────────────────
-type Profile = { id: string; nome: string; nome_projeto?: string; google_sheets_url?: string };
+type Profile = {
+  id: string; nome: string; nome_projeto?: string; google_sheets_url?: string;
+  progresso_criativo?: number; progresso_executivo?: number;
+  data_entrega_criativo?: string; data_entrega_executivo?: string;
+};
 type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string };
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
@@ -575,96 +579,74 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   // ── TAB: Progresso ────────────────────────────────────────
   function TabProgresso() {
-    const [etapa, setEtapa] = useState<"criativo" | "executivo">("criativo");
-    const [item, setItem] = useState("");
-    const [percentual, setPercentual] = useState(0);
-    const [status, setStatus] = useState("nao_iniciado");
+    const [pCriativo, setPCriativo] = useState<number>(data.profile.progresso_criativo ?? 0);
+    const [pExecutivo, setPExecutivo] = useState<number>(data.profile.progresso_executivo ?? 0);
+    const [dataCriativo, setDataCriativo] = useState<string>(data.profile.data_entrega_criativo ?? "");
+    const [dataExecutivo, setDataExecutivo] = useState<string>(data.profile.data_entrega_executivo ?? "");
+    const [saved, setSaved] = useState(false);
 
-    const statusLabels: Record<string, string> = { nao_iniciado: "Não iniciado", em_andamento: "Em andamento", concluido: "Concluído" };
-    const statusColors: Record<string, string> = { nao_iniciado: "bg-gray-100 text-gray-600", em_andamento: "bg-yellow-100 text-yellow-700", concluido: "bg-green-100 text-green-700" };
+    function save() {
+      run(async () => {
+        await updateProfile(clienteId, {
+          progresso_criativo: pCriativo,
+          progresso_executivo: pExecutivo,
+          data_entrega_criativo: dataCriativo || null,
+          data_entrega_executivo: dataExecutivo || null,
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      });
+    }
 
-    const criativo = data.progresso.filter(p => p.etapa === "criativo");
-    const executivo = data.progresso.filter(p => p.etapa === "executivo");
-
-    function ProgressoList({ items }: { items: Progresso[] }) {
+    function SliderEtapa({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
       return (
-        <div className="space-y-2">
-          {items.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium truncate">{p.item}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ml-2 shrink-0 ${statusColors[p.status]}`}>{statusLabels[p.status]}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[var(--creme-escuro)] rounded-full h-1.5">
-                    <div className="bg-[var(--verde-escuro)] h-1.5 rounded-full" style={{ width: `${p.percentual}%` }} />
-                  </div>
-                  <span className="text-xs text-[var(--muted-foreground)] w-8 text-right">{p.percentual}%</span>
-                  <input type="range" min={0} max={100} step={5} value={p.percentual}
-                    onChange={(e) => run(() => updateProgresso(p.id, { percentual: +e.target.value }, clienteId))}
-                    className="w-20 accent-[var(--verde-escuro)]" />
-                  <select value={p.status} onChange={(e) => run(() => updateProgresso(p.id, { status: e.target.value }, clienteId))}
-                    className="text-xs border border-[var(--border)] rounded px-1.5 py-1 bg-white">
-                    {Object.entries(statusLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteProgresso(p.id, clienteId))}><Trash2 size={12} /></Btn>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{label}</span>
+            <span className="text-2xl font-bold text-[var(--verde-escuro)]">{value}%</span>
+          </div>
+          <input
+            type="range" min={0} max={100} step={5} value={value}
+            onChange={(e) => onChange(+e.target.value)}
+            className="w-full h-2 rounded-full appearance-none cursor-pointer accent-[var(--terracota)]"
+          />
+          <div className="w-full bg-[var(--creme-escuro)] rounded-full h-2 -mt-1">
+            <div
+              className="h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${value}%`,
+                background: value === 100 ? "var(--verde-escuro)" : "linear-gradient(90deg, var(--terracota), var(--terracota-claro))",
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-[var(--muted-foreground)]">
+            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-lg">
         <Card>
-          <SectionTitle>Adicionar item de progresso</SectionTitle>
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Etapa</label>
-              <select value={etapa} onChange={(e) => setEtapa(e.target.value as "criativo" | "executivo")}
-                className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm bg-white">
-                <option value="criativo">Criativo</option>
-                <option value="executivo">Executivo</option>
-              </select>
-            </div>
-            <Input label="Item" value={item} onChange={(e) => setItem(e.target.value)} placeholder="Ex: Plantas baixas" />
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">% Inicial</label>
-              <input type="number" min={0} max={100} value={percentual} onChange={(e) => setPercentual(+e.target.value)}
-                className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm bg-white" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm bg-white">
-                <option value="nao_iniciado">Não iniciado</option>
-                <option value="em_andamento">Em andamento</option>
-                <option value="concluido">Concluído</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-3">
-            <Btn onClick={() => { if (!item) return; run(async () => { await saveProgresso(clienteId, { etapa, item, percentual, status }); setItem(""); setPercentual(0); }); }} disabled={isPending || !item}>
-              <Plus size={13} /> Adicionar
-            </Btn>
+          <SectionTitle>Progresso das etapas</SectionTitle>
+          <div className="space-y-6">
+            <SliderEtapa label="Etapa Criativa" value={pCriativo} onChange={setPCriativo} />
+            <SliderEtapa label="Etapa Executiva" value={pExecutivo} onChange={setPExecutivo} />
           </div>
         </Card>
 
-        {criativo.length > 0 && (
-          <Card>
-            <SectionTitle>Etapa Criativa ({criativo.length} itens)</SectionTitle>
-            <ProgressoList items={criativo} />
-          </Card>
-        )}
-        {executivo.length > 0 && (
-          <Card>
-            <SectionTitle>Etapa Executiva ({executivo.length} itens)</SectionTitle>
-            <ProgressoList items={executivo} />
-          </Card>
-        )}
+        <Card>
+          <SectionTitle>Datas de entrega</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Prazo — Etapa Criativa" type="date" value={dataCriativo} onChange={(e) => setDataCriativo(e.target.value)} />
+            <Input label="Prazo — Etapa Executiva" type="date" value={dataExecutivo} onChange={(e) => setDataExecutivo(e.target.value)} />
+          </div>
+        </Card>
+
+        <Btn onClick={save} disabled={isPending}>
+          {saved ? <><Check size={13} /> Salvo!</> : <><Edit2 size={13} /> Salvar progresso</>}
+        </Btn>
       </div>
     );
   }
