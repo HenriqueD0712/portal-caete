@@ -1,0 +1,41 @@
+import { createClient } from "@/src/lib/supabase/server";
+import { CanvaEmbed } from "@/components/canva-embed";
+
+export default async function MidiasVisualPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: arquivos } = await supabase
+    .from("arquivos")
+    .select("id, nome, descricao, url")
+    .eq("cliente_id", user!.id)
+    .eq("categoria", "visual")
+    .order("created_at", { ascending: false });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-[var(--verde-escuro)]">Visual 3D</h1>
+        <p className="text-sm text-[var(--muted-foreground)] mt-1">Renders e apresentações do seu projeto.</p>
+      </div>
+
+      {!arquivos || arquivos.length === 0 ? (
+        <div className="bg-white rounded-lg border border-[var(--border)] p-12 text-center">
+          <p className="text-sm text-[var(--muted-foreground)]">Nenhuma apresentação disponível ainda.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {arquivos.map((arq) => (
+            <div key={arq.id} className="bg-white rounded-lg border border-[var(--border)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--border)]">
+                <p className="font-medium text-sm">{arq.nome}</p>
+                {arq.descricao && <p className="text-xs text-[var(--muted-foreground)]">{arq.descricao}</p>}
+              </div>
+              <CanvaEmbed src={arq.url} title={arq.nome} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
