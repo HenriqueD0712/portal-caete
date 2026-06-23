@@ -49,7 +49,7 @@ export async function getAllClients() {
 export async function getClientData(id: string) {
   await checkAdmin();
   const admin = createAdminClient();
-  const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados] = await Promise.all([
+  const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados, reunioesAgendadas] = await Promise.all([
     admin.from("profiles").select("*").eq("id", id).single(),
     admin.from("arquivos").select("*").eq("cliente_id", id).neq("categoria", "panorama").order("created_at", { ascending: false }),
     admin.from("arquivos").select("*").eq("cliente_id", id).eq("categoria", "panorama").order("created_at", { ascending: false }),
@@ -58,6 +58,7 @@ export async function getClientData(id: string) {
     admin.from("aprovacoes").select("*").eq("cliente_id", id).order("created_at"),
     admin.from("reunioes").select("*").eq("cliente_id", id).order("data_reuniao", { ascending: false }),
     admin.from("cuidados").select("*").eq("cliente_id", id).order("ordem"),
+    admin.from("reunioes_agendadas").select("*").eq("cliente_id", id).order("data_reuniao").order("horario"),
   ]);
   return {
     profile: profile.data,
@@ -68,5 +69,6 @@ export async function getClientData(id: string) {
     aprovacoes: aprovacoes.data ?? [],
     reunioes: reunioes.data ?? [],
     cuidados: cuidados.data ?? [],
+    reunioesAgendadas: reunioesAgendadas.data ?? [],
   };
 }

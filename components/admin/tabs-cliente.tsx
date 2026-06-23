@@ -12,6 +12,7 @@ import {
   saveProgresso, updateProgresso, deleteProgresso,
   saveAprovacao, updateAprovacao, deleteAprovacao, adminToggleBloqueio,
   saveReuniao, updateReuniao, deleteReuniao,
+  saveReuniaoAgendada, deleteReuniaoAgendada,
   saveCuidado, updateCuidado, deleteCuidado,
   changeClientPassword,
 } from "@/app/admin/actions";
@@ -28,6 +29,7 @@ type Cronograma = { id: string; titulo: string; descricao?: string; data_previst
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
 type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string; bloqueado?: boolean };
 type Reuniao = { id: string; data_reuniao: string; assunto: string; ata_texto?: string; ata_url?: string; ata_nome?: string };
+type ReuniaoAgendada = { id: string; data_reuniao: string; horario: string; modalidade: string; assunto?: string; link_reuniao?: string; local_reuniao?: string };
 type Cuidado = { id: string; material: string; descricao: string; ordem: number };
 
 type ClientData = {
@@ -38,6 +40,7 @@ type ClientData = {
   progresso: Progresso[];
   aprovacoes: Aprovacao[];
   reunioes: Reuniao[];
+  reunioesAgendadas: ReuniaoAgendada[];
   cuidados: Cuidado[];
 };
 
@@ -329,6 +332,7 @@ const TABS = [
   { id: "arquivos", label: "Documentos", icon: FileText },
   { id: "progresso", label: "Progresso", icon: BarChart2 },
   { id: "aprovacoes", label: "Aprovações", icon: CheckSquare },
+  { id: "agenda", label: "Agenda", icon: Calendar },
   { id: "reunioes", label: "Reuniões", icon: MessageSquare },
   { id: "cuidados", label: "Cuidados", icon: Shield },
 ];
@@ -812,6 +816,87 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
+  // ── TAB: Reuniões Agendadas ───────────────────────────────
+  function TabReuniaoAgenda() {
+    const [dataA, setDataA] = useState("");
+    const [horario, setHorario] = useState("");
+    const [modalidade, setModalidade] = useState<"online" | "presencial">("online");
+    const [assuntoA, setAssuntoA] = useState("");
+    const [link, setLink] = useState("");
+    const [local, setLocal] = useState("");
+
+    function salvarAgendamento() {
+      if (!dataA || !horario) return;
+      run(async () => {
+        await saveReuniaoAgendada(clienteId, {
+          data_reuniao: dataA, horario, modalidade, assunto: assuntoA,
+          link_reuniao: modalidade === "online" ? link : undefined,
+          local_reuniao: modalidade === "presencial" ? local : undefined,
+        });
+        setDataA(""); setHorario(""); setAssuntoA(""); setLink(""); setLocal("");
+      });
+    }
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <SectionTitle>Agendar reunião</SectionTitle>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Data" type="date" value={dataA} onChange={(e) => setDataA(e.target.value)} />
+              <Input label="Horário" type="time" value={horario} onChange={(e) => setHorario(e.target.value)} />
+            </div>
+            <Input label="Assunto (opcional)" value={assuntoA} onChange={(e) => setAssuntoA(e.target.value)} placeholder="Ex: Revisão do projeto executivo" />
+            <div>
+              <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide block mb-1.5">Modalidade</label>
+              <div className="flex gap-3">
+                {(["online", "presencial"] as const).map((m) => (
+                  <button key={m} type="button" onClick={() => setModalidade(m)}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors capitalize ${modalidade === m ? "border-[var(--verde-escuro)] bg-[var(--verde-escuro)] text-white" : "border-[var(--border)] hover:bg-[var(--creme-escuro)]"}`}>
+                    {m === "online" ? "🎥 Online" : "📍 Presencial"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {modalidade === "online"
+              ? <Input label="Link da reunião" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/..." />
+              : <Input label="Local" value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex: Escritório Estúdio Caeté" />
+            }
+          </div>
+          <div className="mt-3">
+            <Btn disabled={isPending || !dataA || !horario} onClick={salvarAgendamento}>
+              <Plus size={13} /> Agendar
+            </Btn>
+          </div>
+        </Card>
+
+        {data.reunioesAgendadas.length > 0 && (
+          <Card>
+            <SectionTitle>Reuniões agendadas ({data.reunioesAgendadas.length})</SectionTitle>
+            <div className="space-y-2">
+              {data.reunioesAgendadas.map((r) => (
+                <div key={r.id} className="flex items-start justify-between py-3 border-b border-[var(--border)] last:border-0">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{new Date(r.data_reuniao + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {r.horario.slice(0, 5)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${r.modalidade === "online" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                        {r.modalidade === "online" ? "🎥 Online" : "📍 Presencial"}
+                      </span>
+                    </div>
+                    {r.assunto && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{r.assunto}</p>}
+                    {r.link_reuniao && <a href={r.link_reuniao} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline truncate block mt-0.5">{r.link_reuniao}</a>}
+                    {r.local_reuniao && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">📍 {r.local_reuniao}</p>}
+                  </div>
+                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteReuniaoAgendada(r.id, clienteId))}><Trash2 size={12} /></Btn>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
   // ── TAB: Reuniões ─────────────────────────────────────────
   function TabReunioes() {
     const [dataR, setDataR] = useState("");
@@ -1100,6 +1185,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     cronograma: <TabCronograma />,
     progresso: <TabProgresso />,
     aprovacoes: <TabAprovacoes />,
+    agenda: <TabReuniaoAgenda />,
     reunioes: <TabReunioes />,
     cuidados: <TabCuidados />,
   };

@@ -147,6 +147,23 @@ export async function deleteAprovacao(id: string, clienteId: string) {
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
+// ── REUNIÕES AGENDADAS ─────────────────────────────────────
+export async function saveReuniaoAgendada(clienteId: string, data: {
+  data_reuniao: string; horario: string; modalidade: string; assunto?: string; link_reuniao?: string; local_reuniao?: string;
+}) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await admin.from("reunioes_agendadas").insert({ cliente_id: clienteId, ...data });
+  revalidatePath(`/admin/clientes/${clienteId}`);
+}
+
+export async function deleteReuniaoAgendada(id: string, clienteId: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await admin.from("reunioes_agendadas").delete().eq("id", id);
+  revalidatePath(`/admin/clientes/${clienteId}`);
+}
+
 // ── REUNIÕES ───────────────────────────────────────────────
 export async function saveReuniao(clienteId: string, data: { data_reuniao: string; assunto: string; ata_texto?: string; ata_url?: string; ata_nome?: string }) {
   await checkAdmin();
