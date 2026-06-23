@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/src/lib/supabase/server";
 import { createClient } from "@/src/lib/supabase/server";
-import { deleteFile } from "@/src/lib/r2";
+import { deleteFile, deleteAllClientFiles } from "@/src/lib/r2";
 import { revalidatePath } from "next/cache";
 import { ADMIN_EMAIL } from "./config";
 
@@ -58,6 +58,7 @@ export async function adminToggleBloqueio(id: string, bloqueado: boolean, client
 
 export async function deleteClient(id: string) {
   await checkAdmin();
+  await deleteAllClientFiles(id);
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(id);
   revalidatePath("/admin");

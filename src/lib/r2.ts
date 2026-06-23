@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const r2 = new S3Client({
@@ -40,4 +40,30 @@ export async function getDownloadUrl(chave: string) {
 /** Remove arquivo do R2 */
 export async function deleteFile(chave: string) {
   await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: chave }));
+}
+
+/** Remove todos os arquivos de um cliente do R2 (todas as pastas) */
+export async function deleteAllClientFiles(clienteId: string) {
+  const prefixes = ["panoramas/", "arquivos/", "reunioes/", "cuidados/"];
+
+  for (const prefix of prefixes) {
+    let continuationToken: string | undefined;
+    do {
+      const list = await r2.send(new ListObjectsV2Command({
+        Bucket: BUCKET,
+        Prefix: `${prefix}${clienteId}/`,
+        ContinuationToken: continuationToken,
+      }));
+
+      const objects = list.Contents?.map((o) => ({ Key: o.Key! })) ?? [];
+      if (objects.length > 0) {
+        await r2.send(new DeleteObjectsCommand({
+          Bucket: BUCKET,
+          Delete: { Objects: objects, Quiet: true },
+        }));
+      }
+
+      continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined;
+    } while (continuationToken);
+  }
 }
