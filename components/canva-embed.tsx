@@ -23,19 +23,19 @@ export function CanvaEmbed({ src, title }: Props) {
   if (!loaded) {
     return (
       <div
-        className="aspect-video bg-[var(--creme)] flex flex-col items-center justify-center gap-3 cursor-pointer group"
+        className="aspect-[4/3] sm:aspect-video bg-[var(--creme)] flex flex-col items-center justify-center gap-3 cursor-pointer group"
         onClick={() => setLoaded(true)}
       >
-        <div className="w-12 h-12 rounded-full bg-[var(--verde-escuro)] flex items-center justify-center group-hover:bg-[var(--verde-medio)] transition-colors">
-          <Play size={20} className="text-white ml-0.5" />
+        <div className="w-14 h-14 rounded-full bg-[var(--verde-escuro)] flex items-center justify-center group-hover:bg-[var(--verde-medio)] transition-colors shadow-lg">
+          <Play size={22} className="text-white ml-1" />
         </div>
-        <p className="text-sm text-[var(--muted-foreground)]">Clique para carregar a apresentação</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Toque para carregar a apresentação</p>
       </div>
     );
   }
 
   return (
-    <div className="aspect-video">
+    <div className="aspect-[4/3] sm:aspect-video">
       <iframe
         src={embedUrl}
         title={title}

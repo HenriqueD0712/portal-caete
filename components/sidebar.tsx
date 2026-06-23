@@ -198,35 +198,49 @@ export function Sidebar({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-40 lg:hidden bg-[var(--verde-escuro)] border border-white/20 rounded-lg p-2 shadow-md"
-      >
-        <Menu size={18} className="text-white" />
-      </button>
+      {/* ── Mobile top header ── */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[var(--verde-escuro)] flex items-center justify-between px-4 shadow-lg">
+        <Image
+          src="/logo.png"
+          alt="Estúdio Caeté"
+          width={100}
+          height={36}
+          className="h-7 w-auto brightness-0 invert"
+        />
+        <button
+          onClick={() => setOpen(true)}
+          className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Abrir menu"
+        >
+          <Menu size={20} />
+        </button>
+      </header>
 
+      {/* ── Mobile overlay ── */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
       )}
 
+      {/* ── Mobile drawer ── */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 shadow-2xl transition-transform duration-300 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-72 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <button
           onClick={() => setOpen(false)}
-          className="absolute top-4 right-4 text-white/60 hover:text-white z-10"
+          className="absolute top-4 right-4 text-white/60 hover:text-white z-10 p-1"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
         <NavContent />
       </aside>
 
+      {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:block w-64 shrink-0 min-h-screen sticky top-0">
         <NavContent />
       </aside>

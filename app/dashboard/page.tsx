@@ -48,84 +48,56 @@ export default async function DashboardPage() {
   const hoje = new Date();
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 sm:space-y-8 max-w-4xl">
 
       {/* ── Hero ── */}
-      <div className={`relative w-full rounded-2xl overflow-hidden ${destaque ? "h-64 sm:h-80" : "h-40"}`}>
+      <div className={`relative w-full rounded-2xl overflow-hidden ${destaque ? "h-56 sm:h-80" : "h-36 sm:h-48"}`}>
         {destaque ? (
           <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={destaque.url} alt={destaque.nome} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--verde-escuro)]/80 via-[var(--verde-escuro)]/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--verde-escuro)] to-[var(--verde-medio)]" />
         )}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Projeto</p>
-          <h1 className="font-display text-2xl sm:text-3xl text-white leading-tight">
+        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
+          <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] mb-1">Projeto</p>
+          <h1 className="font-display text-2xl sm:text-3xl text-white leading-tight font-semibold">
             {profile?.nome_projeto ?? "Meu Projeto"}
           </h1>
-          {profile?.nome && <p className="text-white/70 text-sm mt-1">Olá, {profile.nome}</p>}
+          {profile?.nome && (
+            <p className="text-white/60 text-sm mt-1.5">Olá, {profile.nome}</p>
+          )}
         </div>
       </div>
 
       {/* ── Progresso ── */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Progresso do Projeto</h2>
-          <span />
-        </div>
-        <div className="bg-white rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
-          {/* Criativo */}
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold">Etapa Criativa</p>
-                {dataCriativo && (
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
-                    <Calendar size={10} /> Prazo: {dataCriativo}
-                  </p>
-                )}
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Progresso do Projeto</h2>
+        <div className="bg-white rounded-2xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {[
+            { label: "Etapa Criativa", pct: pCriativo, data: dataCriativo, gradient: "linear-gradient(90deg, var(--terracota), var(--terracota-claro))" },
+            { label: "Etapa Executiva", pct: pExecutivo, data: dataExecutivo, gradient: "linear-gradient(90deg, var(--verde-escuro), var(--verde-claro))" },
+          ].map(({ label, pct, data, gradient }) => (
+            <div key={label} className="px-5 py-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold">{label}</p>
+                  {data && (
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
+                      <Calendar size={10} /> Prazo: {data}
+                    </p>
+                  )}
+                </div>
+                <span className="text-3xl font-bold text-[var(--verde-escuro)] tabular-nums">{pct}%</span>
               </div>
-              <span className="text-2xl font-bold text-[var(--verde-escuro)]">{pCriativo}%</span>
-            </div>
-            <div className="w-full bg-[var(--creme-escuro)] rounded-full h-2.5">
-              <div
-                className="h-2.5 rounded-full transition-all duration-700"
-                style={{
-                  width: `${pCriativo}%`,
-                  background: pCriativo === 100
-                    ? "var(--verde-escuro)"
-                    : "linear-gradient(90deg, var(--terracota), var(--terracota-claro))",
-                }}
-              />
-            </div>
-          </div>
-          {/* Executivo */}
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold">Etapa Executiva</p>
-                {dataExecutivo && (
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
-                    <Calendar size={10} /> Prazo: {dataExecutivo}
-                  </p>
-                )}
+              <div className="w-full bg-[var(--creme-escuro)] rounded-full h-3">
+                <div className="h-3 rounded-full transition-all duration-700"
+                  style={{ width: `${pct}%`, background: pct === 100 ? "var(--verde-escuro)" : gradient }} />
               </div>
-              <span className="text-2xl font-bold text-[var(--verde-escuro)]">{pExecutivo}%</span>
             </div>
-            <div className="w-full bg-[var(--creme-escuro)] rounded-full h-2.5">
-              <div
-                className="h-2.5 rounded-full transition-all duration-700"
-                style={{
-                  width: `${pExecutivo}%`,
-                  background: pExecutivo === 100
-                    ? "var(--verde-escuro)"
-                    : "linear-gradient(90deg, var(--verde-escuro), var(--verde-claro))",
-                }}
-              />
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -168,14 +140,30 @@ export default async function DashboardPage() {
 
       {/* ── Navegação Rápida ── */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-4">Seções do Portal</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Seções do Portal</h2>
+
+        {/* Mobile: lista vertical elegante */}
+        <div className="sm:hidden bg-white rounded-2xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
           {navCards.map(({ id, label, href, icon: Icon, desc }) => (
-            <Link
-              key={id}
-              href={href}
-              className="group bg-white rounded-xl border border-[var(--border)] p-4 hover:border-[var(--terracota)] hover:shadow-md transition-all duration-200 flex flex-col gap-3"
-            >
+            <Link key={id} href={href}
+              className="flex items-center gap-4 px-5 py-4 active:bg-[var(--creme)] transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
+                <Icon size={17} className="text-[var(--verde-escuro)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold leading-tight">{label}</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-0.5 truncate">{desc}</p>
+              </div>
+              <ChevronRight size={15} className="text-[var(--muted-foreground)] shrink-0" />
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop: grid */}
+        <div className="hidden sm:grid grid-cols-3 gap-3">
+          {navCards.map(({ id, label, href, icon: Icon, desc }) => (
+            <Link key={id} href={href}
+              className="group bg-white rounded-xl border border-[var(--border)] p-4 hover:border-[var(--terracota)] hover:shadow-md transition-all duration-200 flex flex-col gap-3">
               <div className="w-9 h-9 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center group-hover:bg-[var(--terracota)] transition-colors duration-200">
                 <Icon size={16} className="text-[var(--verde-escuro)] group-hover:text-white transition-colors duration-200" />
               </div>

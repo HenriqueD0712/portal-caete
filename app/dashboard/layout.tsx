@@ -25,7 +25,8 @@ export default async function DashboardLayout({
         subcategoriasExecutivo={(profile as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? []}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-6 lg:p-8 lg:pl-8 pl-16">
+        <div className="h-14 lg:hidden shrink-0" />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>
