@@ -326,15 +326,13 @@ function ArquivoUpload({ clienteId, subcategoriasExecutivo = [] }: { clienteId: 
 // ── Main Tabs Component ────────────────────────────────────
 const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
-  { id: "panoramas", label: "Panoramas 360°", icon: ImageIcon },
-  { id: "visual3d", label: "Visual 3D", icon: Video },
+  { id: "midias3d", label: "3D", icon: Video },
   { id: "planilhas", label: "Planilhas", icon: Table2 },
   { id: "executivo_subs", label: "Executivo", icon: Building2 },
   { id: "arquivos", label: "Documentos", icon: FileText },
   { id: "progresso", label: "Progresso", icon: BarChart2 },
   { id: "aprovacoes", label: "Aprovações", icon: CheckSquare },
-  { id: "agenda", label: "Agenda", icon: Calendar },
-  { id: "reunioes", label: "Reuniões", icon: MessageSquare },
+  { id: "agenda_reunioes", label: "Agenda", icon: Calendar },
   { id: "cuidados", label: "Cuidados", icon: Shield },
 ];
 
@@ -1252,16 +1250,14 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   const tabComponents: Record<string, React.ReactNode> = {
     perfil: <TabPerfil />,
-    panoramas: <TabPanoramas />,
-    visual3d: <TabVisual3D />,
+    midias3d: <><TabPanoramas /><div className="mt-6"><TabVisual3D /></div></>,
     planilhas: <TabPlanilhas />,
     executivo_subs: <TabExecutivoSubs />,
     arquivos: <TabArquivos />,
     cronograma: <TabCronograma />,
     progresso: <TabProgresso />,
     aprovacoes: <TabAprovacoes />,
-    agenda: <TabReuniaoAgenda />,
-    reunioes: <TabReunioes />,
+    agenda_reunioes: <><TabReuniaoAgenda /><div className="mt-6"><TabReunioes /></div></>,
     cuidados: <TabCuidados />,
   };
 
