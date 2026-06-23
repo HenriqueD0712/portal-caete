@@ -8,8 +8,17 @@ interface Props {
   title: string;
 }
 
+function toEmbedUrl(url: string): string {
+  if (!url.includes("canva.com")) return url;
+  let base = url.split("?")[0].replace(/\/$/, "");
+  if (base.endsWith("/edit")) base = base.slice(0, -5) + "/view";
+  if (!base.endsWith("/view")) base = base + "/view";
+  return base + "?embed";
+}
+
 export function CanvaEmbed({ src, title }: Props) {
   const [loaded, setLoaded] = useState(false);
+  const embedUrl = toEmbedUrl(src);
 
   if (!loaded) {
     return (
@@ -28,8 +37,9 @@ export function CanvaEmbed({ src, title }: Props) {
   return (
     <div className="aspect-video">
       <iframe
-        src={src}
+        src={embedUrl}
         title={title}
+        allowFullScreen
         allow="fullscreen"
         className="w-full h-full border-0"
         loading="lazy"
