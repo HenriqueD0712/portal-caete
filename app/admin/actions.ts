@@ -134,14 +134,14 @@ export async function deleteAprovacao(id: string, clienteId: string) {
 }
 
 // ── REUNIÕES ───────────────────────────────────────────────
-export async function saveReuniao(clienteId: string, data: { data_reuniao: string; assunto: string; ata_texto?: string }) {
+export async function saveReuniao(clienteId: string, data: { data_reuniao: string; assunto: string; ata_texto?: string; ata_url?: string; ata_nome?: string }) {
   await checkAdmin();
   const admin = createAdminClient();
   await admin.from("reunioes").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
-export async function updateReuniao(id: string, data: Partial<{ data_reuniao: string; assunto: string; ata_texto: string }>, clienteId: string) {
+export async function updateReuniao(id: string, data: Partial<{ data_reuniao: string; assunto: string; ata_texto: string; ata_url: string; ata_nome: string }>, clienteId: string) {
   await checkAdmin();
   const admin = createAdminClient();
   await admin.from("reunioes").update(data).eq("id", id);

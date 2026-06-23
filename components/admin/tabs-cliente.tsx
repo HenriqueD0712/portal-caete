@@ -25,7 +25,7 @@ type Arquivo = { id: string; nome: string; descricao?: string; categoria: string
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
 type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string };
-type Reuniao = { id: string; data_reuniao: string; assunto: string; ata_texto?: string };
+type Reuniao = { id: string; data_reuniao: string; assunto: string; ata_texto?: string; ata_url?: string; ata_nome?: string };
 type Cuidado = { id: string; material: string; descricao: string; ordem: number };
 
 type ClientData = {
@@ -252,7 +252,7 @@ function ArquivoUpload({ clienteId, subcategoriasExecutivo = [] }: { clienteId: 
   const [erro, setErro] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const categorias = ["orcamento", "contrato", "ata", "destaque", "outro", ...subcategoriasExecutivo];
+  const categorias = ["orcamento", "contrato", "destaque", "outro", ...subcategoriasExecutivo];
 
   async function upload() {
     if (!file) return;
@@ -346,12 +346,47 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const [nomeProjeto, setNomeProjeto] = useState(data.profile.nome_projeto ?? "");
     const [sheetsUrl, setSheetsUrl] = useState(data.profile.google_sheets_url ?? "");
     const [saved, setSaved] = useState(false);
+    const [destaqueUploading, setDestaqueUploading] = useState(false);
+    const [destaqueProgress, setDestaqueProgress] = useState(0);
+    const [destaqueDone, setDestaqueDone] = useState(false);
+    const [destaqueErro, setDestaqueErro] = useState("");
+    const destaqueRef = useRef<HTMLInputElement>(null);
+    const destaqueAtual = data.arquivos.find(a => a.categoria === "destaque");
 
     function save() {
       run(async () => {
         await updateProfile(clienteId, { nome, nome_projeto: nomeProjeto, google_sheets_url: sheetsUrl });
         setSaved(true); setTimeout(() => setSaved(false), 2000);
       });
+    }
+
+    async function uploadDestaque(file: File) {
+      setDestaqueUploading(true);
+      setDestaqueErro("");
+      setDestaqueProgress(0);
+      try {
+        if (destaqueAtual) {
+          const chave = destaqueAtual.url.split("/").slice(-3).join("/");
+          await deleteArquivo(destaqueAtual.id, chave, clienteId);
+        }
+        const chave = `arquivos/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+        const res = await fetch("/api/admin/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chave, tipoArquivo: file.type }),
+        });
+        if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+        const { uploadUrl, publicUrl } = await res.json();
+        await xhrUpload(uploadUrl, file, setDestaqueProgress);
+        await saveArquivo(clienteId, { nome: "Imagem de Destaque", categoria: "destaque", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
+        setDestaqueDone(true);
+        setTimeout(() => setDestaqueDone(false), 3000);
+      } catch (e: unknown) {
+        setDestaqueErro(e instanceof Error ? e.message : "Erro desconhecido.");
+      } finally {
+        setDestaqueUploading(false);
+        setDestaqueProgress(0);
+      }
     }
 
     return (
@@ -368,6 +403,40 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               {saved ? <><Check size={13} /> Salvo!</> : <><Edit2 size={13} /> Salvar alterações</>}
             </Btn>
           </div>
+        </Card>
+
+        <Card>
+          <SectionTitle>Imagem de Destaque</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">Aparece como imagem principal no topo do dashboard do cliente.</p>
+          {destaqueAtual && (
+            <div className="mb-3 rounded-lg overflow-hidden border border-[var(--border)] relative" style={{ aspectRatio: "16/6" }}>
+              <img src={destaqueAtual.url} alt="Destaque atual" className="w-full h-full object-cover" />
+              <div className="absolute top-2 right-2">
+                <Btn variant="danger" disabled={isPending} onClick={() => {
+                  const chave = destaqueAtual.url.split("/").slice(-3).join("/");
+                  run(() => deleteArquivo(destaqueAtual.id, chave, clienteId));
+                }}>
+                  <Trash2 size={12} /> Remover
+                </Btn>
+              </div>
+            </div>
+          )}
+          {destaqueErro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md mb-3">{destaqueErro}</p>}
+          {destaqueUploading && (
+            <div className="mb-3 space-y-1">
+              <div className="w-full bg-[var(--creme-escuro)] rounded-full h-2">
+                <div className="bg-[var(--verde-escuro)] h-2 rounded-full transition-all" style={{ width: `${destaqueProgress}%` }} />
+              </div>
+              <p className="text-xs text-center text-[var(--muted-foreground)]">{destaqueProgress}% enviado</p>
+            </div>
+          )}
+          <input ref={destaqueRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDestaque(f); }} />
+          <Btn onClick={() => destaqueRef.current?.click()} disabled={destaqueUploading || isPending}>
+            {destaqueUploading ? `Enviando ${destaqueProgress}%...`
+              : destaqueDone ? <><Check size={13} /> Salvo!</>
+              : <><Upload size={13} /> {destaqueAtual ? "Trocar imagem" : "Selecionar imagem"}</>}
+          </Btn>
         </Card>
       </div>
     );
@@ -709,6 +778,56 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const [assunto, setAssunto] = useState("");
     const [ata, setAta] = useState("");
     const [editId, setEditId] = useState<string | null>(null);
+    const [ataFile, setAtaFile] = useState<File | null>(null);
+    const [ataUploading, setAtaUploading] = useState(false);
+    const [ataProgress, setAtaProgress] = useState(0);
+    const [ataErro, setAtaErro] = useState("");
+    const ataInputRef = useRef<HTMLInputElement>(null);
+
+    function resetForm() {
+      setDataR(""); setAssunto(""); setAta(""); setAtaFile(null); setAtaProgress(0); setAtaErro(""); setEditId(null);
+    }
+
+    async function salvar() {
+      if (!dataR || !assunto) return;
+      let ataUrl: string | undefined;
+      let ataNome: string | undefined;
+
+      if (ataFile) {
+        setAtaUploading(true);
+        setAtaErro("");
+        try {
+          const chave = `reunioes/${clienteId}/${Date.now()}-${ataFile.name.replace(/\s/g, "_")}`;
+          const res = await fetch("/api/admin/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chave, tipoArquivo: ataFile.type }),
+          });
+          if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+          const { uploadUrl, publicUrl } = await res.json();
+          await xhrUpload(uploadUrl, ataFile, setAtaProgress);
+          ataUrl = publicUrl;
+          ataNome = ataFile.name;
+        } catch (e: unknown) {
+          setAtaErro(e instanceof Error ? e.message : "Erro no upload.");
+          setAtaUploading(false);
+          return;
+        }
+        setAtaUploading(false);
+      }
+
+      run(async () => {
+        if (editId) {
+          await updateReuniao(editId, {
+            data_reuniao: dataR, assunto, ata_texto: ata,
+            ...(ataUrl && { ata_url: ataUrl, ata_nome: ataNome }),
+          }, clienteId);
+        } else {
+          await saveReuniao(clienteId, { data_reuniao: dataR, assunto, ata_texto: ata, ata_url: ataUrl, ata_nome: ataNome });
+        }
+        resetForm();
+      });
+    }
 
     return (
       <div className="space-y-4">
@@ -719,23 +838,36 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               <Input label="Data" type="date" value={dataR} onChange={(e) => setDataR(e.target.value)} />
               <Input label="Assunto" value={assunto} onChange={(e) => setAssunto(e.target.value)} />
             </div>
-            <Textarea label="Ata / Notas" value={ata} onChange={(e) => setAta(e.target.value)} placeholder="Resumo da reunião..." />
+            <Textarea label="Ata / Notas (texto)" value={ata} onChange={(e) => setAta(e.target.value)} placeholder="Resumo da reunião..." />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Documento da Ata (opcional)</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button type="button" onClick={() => ataInputRef.current?.click()} disabled={ataUploading}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--creme-escuro)] transition-colors disabled:opacity-50">
+                  <FileText size={14} /> {ataFile ? ataFile.name : "Anexar PDF / documento"}
+                </button>
+                {ataFile && (
+                  <button onClick={() => { setAtaFile(null); setAtaErro(""); }} className="text-[var(--muted-foreground)] hover:text-red-600">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <input ref={ataInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,image/*"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) { setAtaFile(f); setAtaErro(""); } }} />
+              {ataErro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">{ataErro}</p>}
+              {ataUploading && (
+                <div className="space-y-1">
+                  <div className="w-full bg-[var(--creme-escuro)] rounded-full h-1.5">
+                    <div className="bg-[var(--verde-escuro)] h-1.5 rounded-full transition-all" style={{ width: `${ataProgress}%` }} />
+                  </div>
+                  <p className="text-xs text-[var(--muted-foreground)]">{ataProgress}% enviado</p>
+                </div>
+              )}
+            </div>
           </div>
           <div className="mt-3 flex gap-2">
-            {editId && (
-              <Btn variant="ghost" onClick={() => { setEditId(null); setDataR(""); setAssunto(""); setAta(""); }}>Cancelar</Btn>
-            )}
-            <Btn disabled={isPending || !dataR || !assunto} onClick={() => {
-              run(async () => {
-                if (editId) {
-                  await updateReuniao(editId, { data_reuniao: dataR, assunto, ata_texto: ata }, clienteId);
-                  setEditId(null);
-                } else {
-                  await saveReuniao(clienteId, { data_reuniao: dataR, assunto, ata_texto: ata });
-                }
-                setDataR(""); setAssunto(""); setAta("");
-              });
-            }}>
+            {editId && <Btn variant="ghost" onClick={resetForm}>Cancelar</Btn>}
+            <Btn disabled={isPending || ataUploading || !dataR || !assunto} onClick={salvar}>
               <Plus size={13} /> {editId ? "Salvar" : "Adicionar"}
             </Btn>
           </div>
@@ -748,13 +880,21 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               {data.reunioes.map((r) => (
                 <div key={r.id} className="py-3 border-b border-[var(--border)] last:border-0">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium">{r.assunto}</p>
                       <p className="text-xs text-[var(--muted-foreground)]">{new Date(r.data_reuniao + "T12:00:00").toLocaleDateString("pt-BR")}</p>
                       {r.ata_texto && <p className="text-xs text-[var(--foreground)] mt-1 line-clamp-2">{r.ata_texto}</p>}
+                      {r.ata_url && (
+                        <a href={r.ata_url} target="_blank" rel="noreferrer"
+                          className="text-xs text-[var(--verde-escuro)] hover:underline flex items-center gap-1 mt-1">
+                          <FileText size={11} /> {r.ata_nome ?? "Ver documento"}
+                        </a>
+                      )}
                     </div>
                     <div className="flex gap-1 shrink-0 ml-3">
-                      <Btn variant="ghost" onClick={() => { setEditId(r.id); setDataR(r.data_reuniao); setAssunto(r.assunto); setAta(r.ata_texto ?? ""); }}>
+                      <Btn variant="ghost" onClick={() => {
+                        setEditId(r.id); setDataR(r.data_reuniao); setAssunto(r.assunto); setAta(r.ata_texto ?? ""); setAtaFile(null);
+                      }}>
                         <Edit2 size={12} />
                       </Btn>
                       <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteReuniao(r.id, clienteId))}><Trash2 size={12} /></Btn>
