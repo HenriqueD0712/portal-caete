@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
@@ -199,21 +200,24 @@ export function Sidebar({
   return (
     <>
       {/* ── Mobile top header ── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[var(--verde-escuro)] flex items-center justify-between px-4 shadow-lg">
-        <Image
-          src="/logo.png"
-          alt="Estúdio Caeté"
-          width={100}
-          height={36}
-          className="h-7 w-auto brightness-0 invert"
-        />
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[var(--verde-escuro)] flex items-center px-4 shadow-lg gap-4">
         <button
           onClick={() => setOpen(true)}
-          className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           aria-label="Abrir menu"
         >
-          <Menu size={20} />
+          <Menu size={22} />
         </button>
+        <Link href="/dashboard" className="flex-1 flex justify-center" onClick={() => setOpen(false)}>
+          <Image
+            src="/logo.png"
+            alt="Estúdio Caeté"
+            width={130}
+            height={48}
+            className="h-9 w-auto brightness-0 invert"
+          />
+        </Link>
+        <div className="w-10 shrink-0" />
       </header>
 
       {/* ── Mobile overlay ── */}
