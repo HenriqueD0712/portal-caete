@@ -77,12 +77,36 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest mb-3">{children}</h3>;
 }
 
+// ── Upload helper (XHR com progresso) ─────────────────────
+async function xhrUpload(
+  uploadUrl: string,
+  file: File,
+  onProgress: (pct: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Erro ${xhr.status}: ${xhr.statusText}`));
+    };
+    xhr.onerror = () => reject(new Error("Falha na conexão. Verifique o CORS do R2."));
+    xhr.ontimeout = () => reject(new Error("Tempo esgotado."));
+    xhr.open("PUT", uploadUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.send(file);
+  });
+}
+
 // ── Panorama Upload ────────────────────────────────────────
 function PanoramaUpload({ clienteId }: { clienteId: string }) {
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
+  const [erro, setErro] = useState("");
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -92,50 +116,52 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
     if (!file) return;
     setUploading(true);
     setDone(false);
-    const chave = `panoramas/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
-
-    const res = await fetch("/api/admin/upload-url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chave, tipoArquivo: file.type }),
-    });
-    const { uploadUrl, publicUrl } = await res.json();
-
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-      };
-      xhr.onload = () => resolve();
-      xhr.onerror = () => reject(new Error("Falha no upload"));
-      xhr.open("PUT", uploadUrl);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.send(file);
-    });
-
-    await saveArquivo(clienteId, {
-      nome: nome || file.name.replace(/\.[^.]+$/, ""),
-      descricao,
-      categoria: "panorama",
-      url: publicUrl,
-      tipo_arquivo: file.type,
-      tamanho_bytes: file.size,
-    });
-
-    setUploading(false);
-    setDone(true);
+    setErro("");
     setProgress(0);
-    setNome("");
-    setDescricao("");
-    setSelectedFile(null);
-    setTimeout(() => setDone(false), 3000);
+
+    try {
+      const chave = `panoramas/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+
+      const res = await fetch("/api/admin/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chave, tipoArquivo: file.type }),
+      });
+      if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+      const { uploadUrl, publicUrl } = await res.json();
+
+      await xhrUpload(uploadUrl, file, setProgress);
+
+      await saveArquivo(clienteId, {
+        nome: nome || file.name.replace(/\.[^.]+$/, ""),
+        descricao,
+        categoria: "panorama",
+        url: publicUrl,
+        tipo_arquivo: file.type,
+        tamanho_bytes: file.size,
+      });
+
+      setDone(true);
+      setNome("");
+      setDescricao("");
+      setSelectedFile(null);
+      setTimeout(() => setDone(false), 3000);
+    } catch (e: unknown) {
+      setErro(e instanceof Error ? e.message : "Erro desconhecido.");
+    } finally {
+      setUploading(false);
+      setProgress(0);
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) { setSelectedFile(file); if (!nome) setNome(file.name.replace(/\.[^.]+$/, "")); }
+    if (file && file.type.startsWith("image/")) {
+      setSelectedFile(file);
+      if (!nome) setNome(file.name.replace(/\.[^.]+$/, ""));
+    }
   }
 
   return (
@@ -177,6 +203,10 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
         </div>
       </div>
 
+      {erro && (
+        <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">{erro}</p>
+      )}
+
       {selectedFile && (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
@@ -186,17 +216,17 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
           {uploading && (
             <div className="space-y-1">
               <div className="w-full bg-[var(--creme-escuro)] rounded-full h-2">
-                <div className="bg-[var(--verde-escuro)] h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                <div className="bg-[var(--verde-escuro)] h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
               </div>
               <p className="text-xs text-[var(--muted-foreground)] text-center">{progress}% enviado</p>
             </div>
           )}
           <div className="flex gap-2">
-            <Btn onClick={() => { setSelectedFile(null); setNome(""); }} variant="ghost" disabled={uploading}>
+            <Btn onClick={() => { setSelectedFile(null); setNome(""); setErro(""); }} variant="ghost" disabled={uploading}>
               <X size={13} /> Cancelar
             </Btn>
             <Btn onClick={() => upload(selectedFile)} disabled={uploading || !nome}>
-              {uploading ? "Enviando..." : done ? <><Check size={13} /> Salvo!</> : <><Upload size={13} /> Enviar panorama</>}
+              {uploading ? `Enviando ${progress}%...` : done ? <><Check size={13} /> Salvo!</> : <><Upload size={13} /> Enviar panorama</>}
             </Btn>
           </div>
         </div>
@@ -214,6 +244,7 @@ function ArquivoUpload({ clienteId }: { clienteId: string }) {
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
+  const [erro, setErro] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const categorias = ["orcamento", "obra", "marcenaria", "marmoraria", "ata", "outro"];
@@ -221,26 +252,28 @@ function ArquivoUpload({ clienteId }: { clienteId: string }) {
   async function upload() {
     if (!file) return;
     setUploading(true);
-    const chave = `arquivos/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
-    const res = await fetch("/api/admin/upload-url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chave, tipoArquivo: file.type }),
-    });
-    const { uploadUrl, publicUrl } = await res.json();
+    setErro("");
+    setProgress(0);
+    try {
+      const chave = `arquivos/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+      const res = await fetch("/api/admin/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chave, tipoArquivo: file.type }),
+      });
+      if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+      const { uploadUrl, publicUrl } = await res.json();
 
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
-      xhr.onload = () => resolve(); xhr.onerror = () => reject(new Error("Upload failed"));
-      xhr.open("PUT", uploadUrl);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.send(file);
-    });
+      await xhrUpload(uploadUrl, file, setProgress);
 
-    await saveArquivo(clienteId, { nome: nome || file.name, descricao, categoria, url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
-    setUploading(false); setDone(true); setProgress(0); setFile(null); setNome(""); setDescricao("");
-    setTimeout(() => setDone(false), 3000);
+      await saveArquivo(clienteId, { nome: nome || file.name, descricao, categoria, url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
+      setDone(true); setFile(null); setNome(""); setDescricao("");
+      setTimeout(() => setDone(false), 3000);
+    } catch (e: unknown) {
+      setErro(e instanceof Error ? e.message : "Erro desconhecido.");
+    } finally {
+      setUploading(false); setProgress(0);
+    }
   }
 
   return (
@@ -252,6 +285,7 @@ function ArquivoUpload({ clienteId }: { clienteId: string }) {
         {file && <span className="text-xs text-[var(--muted-foreground)]">{(file.size / 1024 / 1024).toFixed(2)} MB</span>}
         <input ref={inputRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); if (!nome) setNome(f.name.replace(/\.[^.]+$/, "")); } }} />
       </div>
+      {erro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">{erro}</p>}
       {file && (
         <div className="grid grid-cols-3 gap-2">
           <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -336,11 +370,37 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   // ── TAB: Panoramas 360° ──────────────────────────────────
   function TabPanoramas() {
+    const [corsOk, setCorsOk] = useState<boolean | null>(null);
+
+    async function configurarCors() {
+      setCorsOk(null);
+      try {
+        const res = await fetch("/api/admin/setup-r2-cors", { method: "POST" });
+        setCorsOk(res.ok);
+      } catch {
+        setCorsOk(false);
+      }
+    }
+
     return (
       <div className="space-y-6">
         <Card>
           <SectionTitle>Adicionar panorama 360°</SectionTitle>
           <PanoramaUpload clienteId={clienteId} />
+        </Card>
+
+        <Card>
+          <SectionTitle>Configuração de upload</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            Se o upload ficar em 0%, clique abaixo para configurar o CORS do R2 (necessário apenas uma vez).
+          </p>
+          <div className="flex items-center gap-3">
+            <Btn variant="ghost" onClick={configurarCors}>
+              Configurar CORS do R2
+            </Btn>
+            {corsOk === true && <span className="text-xs text-green-600 font-medium">✓ CORS configurado! Tente o upload novamente.</span>}
+            {corsOk === false && <span className="text-xs text-red-600">Erro ao configurar. Verifique as variáveis R2 no Vercel.</span>}
+          </div>
         </Card>
 
         {data.panoramas.length > 0 && (
