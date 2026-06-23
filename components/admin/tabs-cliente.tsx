@@ -7,12 +7,12 @@ import {
   Lock, Unlock, KeyRound, Table2, BookOpen,
 } from "lucide-react";
 import {
-  updateProfile, saveArquivo, deleteArquivo,
+  updateProfile, saveArquivo, updateArquivo, deleteArquivo,
   saveCronograma, updateCronograma, deleteCronograma,
   saveProgresso, updateProgresso, deleteProgresso,
   saveAprovacao, updateAprovacao, deleteAprovacao, adminToggleBloqueio,
   saveReuniao, updateReuniao, deleteReuniao,
-  saveReuniaoAgendada, deleteReuniaoAgendada,
+  saveReuniaoAgendada, updateReuniaoAgendada, deleteReuniaoAgendada,
   saveCuidado, updateCuidado, deleteCuidado,
   changeClientPassword,
 } from "@/app/admin/actions";
@@ -478,6 +478,57 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
+  // ── Panoramas List (with inline edit) ────────────────────
+  function PanoramasList({ clienteId, panoramas, isPending, run }: { clienteId: string; panoramas: Arquivo[]; isPending: boolean; run: (fn: () => Promise<unknown>) => void }) {
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editNome, setEditNome] = useState("");
+    const [editDesc, setEditDesc] = useState("");
+
+    function startEdit(p: Arquivo) { setEditId(p.id); setEditNome(p.nome); setEditDesc(p.descricao ?? ""); }
+    function cancelEdit() { setEditId(null); setEditNome(""); setEditDesc(""); }
+    function saveEdit(id: string) {
+      run(async () => { await updateArquivo(id, { nome: editNome, descricao: editDesc }, clienteId); cancelEdit(); });
+    }
+
+    return (
+      <Card>
+        <SectionTitle>Panoramas publicados ({panoramas.length})</SectionTitle>
+        <div className="space-y-2">
+          {panoramas.map((p) => editId === p.id ? (
+            <div key={p.id} className="py-2 border-b border-[var(--border)] last:border-0 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                <Input label="Descrição" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <Btn onClick={() => saveEdit(p.id)} disabled={isPending || !editNome}><Check size={12} /> Salvar</Btn>
+                <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+              </div>
+            </div>
+          ) : (
+            <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+              <div>
+                <p className="text-sm font-medium">{p.nome}</p>
+                {p.descricao && <p className="text-xs text-[var(--muted-foreground)]">{p.descricao}</p>}
+                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                  {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                  {p.tamanho_bytes ? ` · ${(p.tamanho_bytes / 1024 / 1024).toFixed(1)} MB` : ""}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Ver</a>
+                <Btn variant="ghost" onClick={() => startEdit(p)}><Edit2 size={12} /></Btn>
+                <Btn variant="danger" disabled={isPending} onClick={() => { const chave = p.url.split("/").slice(-3).join("/"); run(() => deleteArquivo(p.id, chave, clienteId)); }}>
+                  <Trash2 size={12} />
+                </Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
   // ── TAB: Panoramas 360° ──────────────────────────────────
   function TabPanoramas() {
     const [corsOk, setCorsOk] = useState<boolean | null>(null);
@@ -514,32 +565,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         </Card>
 
         {data.panoramas.length > 0 && (
-          <Card>
-            <SectionTitle>Panoramas publicados ({data.panoramas.length})</SectionTitle>
-            <div className="space-y-2">
-              {data.panoramas.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                  <div>
-                    <p className="text-sm font-medium">{p.nome}</p>
-                    {p.descricao && <p className="text-xs text-[var(--muted-foreground)]">{p.descricao}</p>}
-                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                      {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                      {p.tamanho_bytes ? ` · ${(p.tamanho_bytes / 1024 / 1024).toFixed(1)} MB` : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Ver</a>
-                    <Btn variant="danger" disabled={isPending} onClick={() => {
-                      const chave = p.url.split("/").slice(-3).join("/");
-                      run(() => deleteArquivo(p.id, chave, clienteId));
-                    }}>
-                      <Trash2 size={12} />
-                    </Btn>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <PanoramasList clienteId={clienteId} panoramas={data.panoramas} isPending={isPending} run={run} />
         )}
       </div>
     );
@@ -550,13 +576,18 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const visuais = data.arquivos.filter(a => a.categoria === "visual_3d");
     const [nome, setNome] = useState("");
     const [url, setUrl] = useState("");
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editNome, setEditNome] = useState("");
+    const [editUrl, setEditUrl] = useState("");
 
     function add() {
       if (!nome || !url) return;
-      run(async () => {
-        await saveArquivo(clienteId, { nome, categoria: "visual_3d", url });
-        setNome(""); setUrl("");
-      });
+      run(async () => { await saveArquivo(clienteId, { nome, categoria: "visual_3d", url }); setNome(""); setUrl(""); });
+    }
+    function startEdit(v: Arquivo) { setEditId(v.id); setEditNome(v.nome); setEditUrl(v.url); }
+    function cancelEdit() { setEditId(null); setEditNome(""); setEditUrl(""); }
+    function saveEdit(id: string) {
+      run(async () => { await updateArquivo(id, { nome: editNome, url: editUrl }, clienteId); cancelEdit(); });
     }
 
     return (
@@ -576,15 +607,27 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           <Card>
             <SectionTitle>Visuais publicados ({visuais.length})</SectionTitle>
             <div className="space-y-2">
-              {visuais.map((v) => (
+              {visuais.map((v) => editId === v.id ? (
+                <div key={v.id} className="py-2 border-b border-[var(--border)] last:border-0 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                    <Input label="URL Canva" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Btn onClick={() => saveEdit(v.id)} disabled={isPending || !editNome || !editUrl}><Check size={12} /> Salvar</Btn>
+                    <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+                  </div>
+                </div>
+              ) : (
                 <div key={v.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                   <div>
                     <p className="text-sm font-medium">{v.nome}</p>
                     <p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{v.url}</p>
                   </div>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(v.id, "", clienteId))}>
-                    <Trash2 size={12} />
-                  </Btn>
+                  <div className="flex gap-2">
+                    <Btn variant="ghost" onClick={() => startEdit(v)}><Edit2 size={12} /></Btn>
+                    <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(v.id, "", clienteId))}><Trash2 size={12} /></Btn>
+                  </div>
                 </div>
               ))}
             </div>
@@ -602,6 +645,9 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const [pUrl,  setPUrl]  = useState("");
     const [cNome, setCNome] = useState("");
     const [cUrl,  setCUrl]  = useState("");
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editNome, setEditNome] = useState("");
+    const [editUrl, setEditUrl] = useState("");
 
     function addPlanilha() {
       if (!pNome || !pUrl) return;
@@ -610,6 +656,35 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     function addCaderno() {
       if (!cNome || !cUrl) return;
       run(async () => { await saveArquivo(clienteId, { nome: cNome, categoria: "caderno", url: cUrl }); setCNome(""); setCUrl(""); });
+    }
+    function startEdit(item: Arquivo) { setEditId(item.id); setEditNome(item.nome); setEditUrl(item.url); }
+    function cancelEdit() { setEditId(null); setEditNome(""); setEditUrl(""); }
+    function saveEdit(id: string) {
+      run(async () => { await updateArquivo(id, { nome: editNome, url: editUrl }, clienteId); cancelEdit(); });
+    }
+
+    function EditableRow({ item, urlLabel }: { item: Arquivo; urlLabel: string }) {
+      if (editId === item.id) return (
+        <div className="py-2 border-b border-[var(--border)] last:border-0 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+            <Input label={urlLabel} value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <Btn onClick={() => saveEdit(item.id)} disabled={isPending || !editNome || !editUrl}><Check size={12} /> Salvar</Btn>
+            <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+          </div>
+        </div>
+      );
+      return (
+        <div className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+          <div><p className="text-sm font-medium">{item.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{item.url}</p></div>
+          <div className="flex gap-2">
+            <Btn variant="ghost" onClick={() => startEdit(item)}><Edit2 size={12} /></Btn>
+            <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(item.id, "", clienteId))}><Trash2 size={12} /></Btn>
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -628,13 +703,8 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         {planilhas.length > 0 && (
           <Card>
             <SectionTitle>Planilhas ({planilhas.length})</SectionTitle>
-            <div className="space-y-2">
-              {planilhas.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                  <div><p className="text-sm font-medium">{p.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{p.url}</p></div>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(p.id, "", clienteId))}><Trash2 size={12} /></Btn>
-                </div>
-              ))}
+            <div className="space-y-0">
+              {planilhas.map((p) => <EditableRow key={p.id} item={p} urlLabel="URL Sheets" />)}
             </div>
           </Card>
         )}
@@ -653,13 +723,8 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         {cadernos.length > 0 && (
           <Card>
             <SectionTitle>Cadernos ({cadernos.length})</SectionTitle>
-            <div className="space-y-2">
-              {cadernos.map((c) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                  <div><p className="text-sm font-medium">{c.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{c.url}</p></div>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(c.id, "", clienteId))}><Trash2 size={12} /></Btn>
-                </div>
-              ))}
+            <div className="space-y-0">
+              {cadernos.map((c) => <EditableRow key={c.id} item={c} urlLabel="URL Canva" />)}
             </div>
           </Card>
         )}
@@ -670,6 +735,16 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
   // ── TAB: Documentos ───────────────────────────────────────
   function TabArquivos() {
     const docs = data.arquivos.filter(a => a.categoria !== "visual_3d");
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editNome, setEditNome] = useState("");
+    const [editDesc, setEditDesc] = useState("");
+
+    function startEdit(a: Arquivo) { setEditId(a.id); setEditNome(a.nome); setEditDesc(a.descricao ?? ""); }
+    function cancelEdit() { setEditId(null); setEditNome(""); setEditDesc(""); }
+    function saveEdit(id: string) {
+      run(async () => { await updateArquivo(id, { nome: editNome, descricao: editDesc }, clienteId); cancelEdit(); });
+    }
+
     return (
       <div className="space-y-4">
         <Card>
@@ -680,15 +755,28 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         {docs.length > 0 && (
           <Card>
             <SectionTitle>Documentos ({docs.length})</SectionTitle>
-            <div className="space-y-2">
-              {docs.map((a) => (
+            <div className="space-y-0">
+              {docs.map((a) => editId === a.id ? (
+                <div key={a.id} className="py-2 border-b border-[var(--border)] last:border-0 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                    <Input label="Descrição" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Btn onClick={() => saveEdit(a.id)} disabled={isPending || !editNome}><Check size={12} /> Salvar</Btn>
+                    <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+                  </div>
+                </div>
+              ) : (
                 <div key={a.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                   <div>
                     <p className="text-sm font-medium">{a.nome}</p>
                     <p className="text-xs text-[var(--muted-foreground)]">{a.categoria} · {new Date(a.created_at).toLocaleDateString("pt-BR")}</p>
+                    {a.descricao && <p className="text-xs text-[var(--muted-foreground)] italic">{a.descricao}</p>}
                   </div>
                   <div className="flex gap-2">
                     <a href={a.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Abrir</a>
+                    <Btn variant="ghost" onClick={() => startEdit(a)}><Edit2 size={12} /></Btn>
                     <Btn variant="danger" disabled={isPending} onClick={() => {
                       const chave = a.url.split("/").slice(-3).join("/");
                       run(() => deleteArquivo(a.id, chave, clienteId));
@@ -888,6 +976,88 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
+  // ── Reuniões Agendadas List (with inline edit) ────────────
+  function ReuniaoAgendadaList({ clienteId, reunioes, isPending, run }: { clienteId: string; reunioes: ReuniaoAgendada[]; isPending: boolean; run: (fn: () => Promise<unknown>) => void }) {
+    const [editId, setEditId] = useState<string | null>(null);
+    const [eData, setEData] = useState("");
+    const [eHorario, setEHorario] = useState("");
+    const [eModalidade, setEModalidade] = useState<"online" | "presencial">("online");
+    const [eAssunto, setEAssunto] = useState("");
+    const [eLink, setELink] = useState("");
+    const [eLocal, setELocal] = useState("");
+
+    function startEdit(r: ReuniaoAgendada) {
+      setEditId(r.id); setEData(r.data_reuniao); setEHorario(r.horario.slice(0, 5));
+      setEModalidade(r.modalidade as "online" | "presencial");
+      setEAssunto(r.assunto ?? ""); setELink(r.link_reuniao ?? ""); setELocal(r.local_reuniao ?? "");
+    }
+    function cancelEdit() { setEditId(null); }
+    function saveEdit(id: string) {
+      run(async () => {
+        await updateReuniaoAgendada(id, {
+          data_reuniao: eData, horario: eHorario, modalidade: eModalidade, assunto: eAssunto,
+          link_reuniao: eModalidade === "online" ? eLink : undefined,
+          local_reuniao: eModalidade === "presencial" ? eLocal : undefined,
+        }, clienteId);
+        cancelEdit();
+      });
+    }
+
+    return (
+      <Card>
+        <SectionTitle>Reuniões agendadas ({reunioes.length})</SectionTitle>
+        <div className="space-y-1">
+          {reunioes.map((r) => editId === r.id ? (
+            <div key={r.id} className="py-3 border-b border-[var(--border)] last:border-0 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Data" type="date" value={eData} onChange={(e) => setEData(e.target.value)} />
+                <Input label="Horário" type="time" value={eHorario} onChange={(e) => setEHorario(e.target.value)} />
+              </div>
+              <Input label="Assunto" value={eAssunto} onChange={(e) => setEAssunto(e.target.value)} />
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide block mb-1.5">Modalidade</label>
+                <div className="flex gap-2">
+                  {(["online", "presencial"] as const).map((m) => (
+                    <button key={m} type="button" onClick={() => setEModalidade(m)}
+                      className={`flex-1 py-1.5 rounded-md border text-sm font-medium transition-colors capitalize ${eModalidade === m ? "border-[var(--verde-escuro)] bg-[var(--verde-escuro)] text-white" : "border-[var(--border)] hover:bg-[var(--creme-escuro)]"}`}>
+                      {m === "online" ? "🎥 Online" : "📍 Presencial"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {eModalidade === "online"
+                ? <Input label="Link" value={eLink} onChange={(e) => setELink(e.target.value)} placeholder="https://meet.google.com/..." />
+                : <Input label="Local" value={eLocal} onChange={(e) => setELocal(e.target.value)} />
+              }
+              <div className="flex gap-2">
+                <Btn onClick={() => saveEdit(r.id)} disabled={isPending || !eData || !eHorario}><Check size={12} /> Salvar</Btn>
+                <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+              </div>
+            </div>
+          ) : (
+            <div key={r.id} className="flex items-start justify-between py-3 border-b border-[var(--border)] last:border-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium">{new Date(r.data_reuniao + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {r.horario.slice(0, 5)}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${r.modalidade === "online" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                    {r.modalidade === "online" ? "🎥 Online" : "📍 Presencial"}
+                  </span>
+                </div>
+                {r.assunto && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{r.assunto}</p>}
+                {r.link_reuniao && <a href={r.link_reuniao} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline truncate block mt-0.5">{r.link_reuniao}</a>}
+                {r.local_reuniao && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">📍 {r.local_reuniao}</p>}
+              </div>
+              <div className="flex gap-1 shrink-0 ml-2">
+                <Btn variant="ghost" onClick={() => startEdit(r)}><Edit2 size={12} /></Btn>
+                <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteReuniaoAgendada(r.id, clienteId))}><Trash2 size={12} /></Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
   // ── TAB: Reuniões Agendadas ───────────────────────────────
   function TabReuniaoAgenda() {
     const [dataA, setDataA] = useState("");
@@ -943,27 +1113,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         </Card>
 
         {data.reunioesAgendadas.length > 0 && (
-          <Card>
-            <SectionTitle>Reuniões agendadas ({data.reunioesAgendadas.length})</SectionTitle>
-            <div className="space-y-2">
-              {data.reunioesAgendadas.map((r) => (
-                <div key={r.id} className="flex items-start justify-between py-3 border-b border-[var(--border)] last:border-0">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium">{new Date(r.data_reuniao + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {r.horario.slice(0, 5)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${r.modalidade === "online" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
-                        {r.modalidade === "online" ? "🎥 Online" : "📍 Presencial"}
-                      </span>
-                    </div>
-                    {r.assunto && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{r.assunto}</p>}
-                    {r.link_reuniao && <a href={r.link_reuniao} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline truncate block mt-0.5">{r.link_reuniao}</a>}
-                    {r.local_reuniao && <p className="text-xs text-[var(--muted-foreground)] mt-0.5">📍 {r.local_reuniao}</p>}
-                  </div>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteReuniaoAgendada(r.id, clienteId))}><Trash2 size={12} /></Btn>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <ReuniaoAgendadaList clienteId={clienteId} reunioes={data.reunioesAgendadas} isPending={isPending} run={run} />
         )}
       </div>
     );

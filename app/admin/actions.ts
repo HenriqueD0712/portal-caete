@@ -73,6 +73,13 @@ export async function saveArquivo(clienteId: string, data: {
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
+export async function updateArquivo(id: string, data: { nome?: string; descricao?: string; url?: string }, clienteId: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await admin.from("arquivos").update(data).eq("id", id);
+  revalidatePath(`/admin/clientes/${clienteId}`);
+}
+
 export async function deleteArquivo(id: string, chave: string, clienteId: string) {
   await checkAdmin();
   try { await deleteFile(chave); } catch {}
@@ -154,6 +161,13 @@ export async function saveReuniaoAgendada(clienteId: string, data: {
   await checkAdmin();
   const admin = createAdminClient();
   await admin.from("reunioes_agendadas").insert({ cliente_id: clienteId, ...data });
+  revalidatePath(`/admin/clientes/${clienteId}`);
+}
+
+export async function updateReuniaoAgendada(id: string, data: Partial<{ data_reuniao: string; horario: string; modalidade: string; assunto: string; link_reuniao: string; local_reuniao: string }>, clienteId: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await admin.from("reunioes_agendadas").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
