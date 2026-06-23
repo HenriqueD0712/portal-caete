@@ -911,42 +911,78 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   // ── TAB: Cuidados ─────────────────────────────────────────
   function TabCuidados() {
-    const [material, setMaterial] = useState("");
-    const [descricao, setDescricao] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [erro, setErro] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const docAtual = data.arquivos.find((a) => a.categoria === "cuidados");
+
+    async function uploadDoc(file: File) {
+      setUploading(true); setErro(""); setProgress(0);
+      try {
+        if (docAtual) await deleteArquivo(docAtual.id, docAtual.url, clienteId);
+        const chave = `cuidados/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+        const res = await fetch("/api/admin/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chave, tipoArquivo: file.type }),
+        });
+        if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+        const { uploadUrl, publicUrl } = await res.json();
+        await xhrUpload(uploadUrl, file, setProgress);
+        await saveArquivo(clienteId, { nome: file.name, categoria: "cuidados", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
+      } catch (e: unknown) {
+        setErro(e instanceof Error ? e.message : "Erro no upload.");
+      }
+      setUploading(false);
+    }
 
     return (
       <div className="space-y-4">
         <Card>
-          <SectionTitle>Adicionar cuidado</SectionTitle>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Material" value={material} onChange={(e) => setMaterial(e.target.value)} placeholder="Ex: Mármore, Madeira..." />
-            <Textarea label="Instrução" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Como cuidar deste material..." />
-          </div>
-          <div className="mt-3">
-            <Btn disabled={isPending || !material || !descricao} onClick={() => {
-              run(async () => { await saveCuidado(clienteId, { material, descricao, ordem: data.cuidados.length }); setMaterial(""); setDescricao(""); });
-            }}>
-              <Plus size={13} /> Adicionar
-            </Btn>
-          </div>
-        </Card>
+          <SectionTitle>Documento de Cuidados com o Projeto</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-4">
+            Faça o upload do PDF gerado com IA contendo as orientações de manutenção. O documento substituirá o anterior automaticamente.
+          </p>
 
-        {data.cuidados.length > 0 && (
-          <Card>
-            <SectionTitle>Cuidados ({data.cuidados.length})</SectionTitle>
-            <div className="space-y-2">
-              {data.cuidados.map((c) => (
-                <div key={c.id} className="flex items-start justify-between py-2 border-b border-[var(--border)] last:border-0">
-                  <div>
-                    <p className="text-sm font-medium">{c.material}</p>
-                    <p className="text-xs text-[var(--muted-foreground)]">{c.descricao}</p>
-                  </div>
-                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteCuidado(c.id, clienteId))}><Trash2 size={12} /></Btn>
+          {docAtual ? (
+            <div className="flex items-center justify-between p-3 bg-[var(--creme)] rounded-lg border border-[var(--border)]">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={16} className="text-[var(--verde-escuro)] shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{docAtual.nome}</p>
+                  <a href={docAtual.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Visualizar</a>
                 </div>
-              ))}
+              </div>
+              <div className="flex gap-2 shrink-0 ml-3">
+                <Btn variant="ghost" onClick={() => inputRef.current?.click()} disabled={uploading}>Substituir</Btn>
+                <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(docAtual.id, docAtual.url, clienteId))}>
+                  <Trash2 size={12} />
+                </Btn>
+              </div>
             </div>
-          </Card>
-        )}
+          ) : (
+            <button onClick={() => inputRef.current?.click()} disabled={uploading}
+              className="w-full flex flex-col items-center gap-2 p-8 border-2 border-dashed border-[var(--border)] rounded-lg hover:border-[var(--verde-escuro)] hover:bg-[var(--creme)] transition-colors disabled:opacity-50">
+              <Upload size={24} className="text-[var(--muted-foreground)]" />
+              <span className="text-sm text-[var(--muted-foreground)]">Clique para enviar o documento (PDF)</span>
+            </button>
+          )}
+
+          <input ref={inputRef} type="file" className="hidden" accept=".pdf,.doc,.docx"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDoc(f); e.target.value = ""; }} />
+
+          {uploading && (
+            <div className="space-y-1 mt-2">
+              <div className="w-full bg-[var(--creme-escuro)] rounded-full h-1.5">
+                <div className="bg-[var(--verde-escuro)] h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">{progress}% enviado</p>
+            </div>
+          )}
+          {erro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md mt-2">{erro}</p>}
+        </Card>
       </div>
     );
   }
