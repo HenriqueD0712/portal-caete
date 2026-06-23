@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllClients, getTotalStorage } from "./queries";
 import { NovoClienteModal } from "@/components/admin/novo-cliente-modal";
+import { DeleteClientBtn } from "@/components/admin/delete-client-btn";
 import { Users, FolderOpen, Calendar, HardDrive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -67,10 +68,13 @@ export default async function AdminPage() {
                 <div className="w-9 h-9 rounded-full bg-[var(--creme-escuro)] flex items-center justify-center text-[var(--verde-escuro)] font-semibold text-sm group-hover:bg-[var(--verde-escuro)] group-hover:text-white transition-colors">
                   {c.nome?.charAt(0)?.toUpperCase() ?? "?"}
                 </div>
-                <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1">
-                  <Calendar size={11} />
-                  {new Date(c.created_at).toLocaleDateString("pt-BR")}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1">
+                    <Calendar size={11} />
+                    {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                  <DeleteClientBtn clienteId={c.id} nomeCliente={c.nome ?? "cliente"} />
+                </div>
               </div>
               <p className="font-medium text-[var(--foreground)] text-sm">{c.nome}</p>
               {c.nome_projeto && (
