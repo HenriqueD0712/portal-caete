@@ -916,13 +916,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const [docErro, setDocErro] = useState("");
     const docRef = useRef<HTMLInputElement>(null);
 
-    const [imgUploading, setImgUploading] = useState(false);
-    const [imgProgress, setImgProgress] = useState(0);
-    const [imgErro, setImgErro] = useState("");
-    const imgRef = useRef<HTMLInputElement>(null);
-
     const docAtual = data.arquivos.find((a) => a.categoria === "cuidados");
-    const imagens = data.arquivos.filter((a) => a.categoria === "cuidados_imagem");
 
     async function uploadDoc(file: File) {
       setDocUploading(true); setDocErro(""); setDocProgress(0);
@@ -938,37 +932,30 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
       setDocUploading(false);
     }
 
-    async function uploadImagem(file: File) {
-      setImgUploading(true); setImgErro(""); setImgProgress(0);
-      try {
-        const chave = `cuidados-img/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
-        const res = await fetch("/api/admin/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chave, tipoArquivo: file.type }) });
-        if (!res.ok) throw new Error("Falha ao obter URL de upload.");
-        const { uploadUrl, publicUrl } = await res.json();
-        await xhrUpload(uploadUrl, file, setImgProgress);
-        await saveArquivo(clienteId, { nome: file.name, categoria: "cuidados_imagem", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
-      } catch (e: unknown) { setImgErro(e instanceof Error ? e.message : "Erro no upload."); }
-      setImgUploading(false);
-    }
+    const isImagem = docAtual?.tipo_arquivo?.startsWith("image/");
 
     return (
       <div className="space-y-4">
-        {/* Documento PDF */}
         <Card>
-          <SectionTitle>Documento de Cuidados (PDF)</SectionTitle>
+          <SectionTitle>Documento de Cuidados com o Projeto</SectionTitle>
           <p className="text-xs text-[var(--muted-foreground)] mb-4">
-            PDF gerado com IA com as orientações de manutenção. Substituirá o anterior automaticamente.
+            Envie o PDF ou imagem gerado com IA. Substituirá o arquivo anterior automaticamente.
           </p>
           {docAtual ? (
-            <div className="flex items-center justify-between p-3 bg-[var(--creme)] rounded-lg border border-[var(--border)]">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileText size={16} className="text-[var(--verde-escuro)] shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{docAtual.nome}</p>
-                  <a href={docAtual.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Visualizar</a>
+            <div className="space-y-3">
+              {isImagem ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={docAtual.url} alt={docAtual.nome} className="w-full rounded-lg border border-[var(--border)] object-contain max-h-64" />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-[var(--creme)] rounded-lg border border-[var(--border)]">
+                  <FileText size={16} className="text-[var(--verde-escuro)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{docAtual.nome}</p>
+                    <a href={docAtual.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Visualizar</a>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2 shrink-0 ml-3">
+              )}
+              <div className="flex gap-2">
                 <Btn variant="ghost" onClick={() => docRef.current?.click()} disabled={docUploading}>Substituir</Btn>
                 <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(docAtual.id, docAtual.url, clienteId))}><Trash2 size={12} /></Btn>
               </div>
@@ -977,10 +964,10 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
             <button onClick={() => docRef.current?.click()} disabled={docUploading}
               className="w-full flex flex-col items-center gap-2 p-8 border-2 border-dashed border-[var(--border)] rounded-lg hover:border-[var(--verde-escuro)] hover:bg-[var(--creme)] transition-colors disabled:opacity-50">
               <Upload size={24} className="text-[var(--muted-foreground)]" />
-              <span className="text-sm text-[var(--muted-foreground)]">Clique para enviar o documento (PDF)</span>
+              <span className="text-sm text-[var(--muted-foreground)]">Clique para enviar (PDF ou imagem)</span>
             </button>
           )}
-          <input ref={docRef} type="file" className="hidden" accept=".pdf,.doc,.docx"
+          <input ref={docRef} type="file" className="hidden" accept=".pdf,.doc,.docx,image/*"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDoc(f); e.target.value = ""; }} />
           {docUploading && (
             <div className="space-y-1 mt-2">
@@ -991,45 +978,6 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
             </div>
           )}
           {docErro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md mt-2">{docErro}</p>}
-        </Card>
-
-        {/* Imagens */}
-        <Card>
-          <SectionTitle>Imagens de Referência</SectionTitle>
-          <p className="text-xs text-[var(--muted-foreground)] mb-4">
-            Fotos e imagens complementares para ilustrar os cuidados.
-          </p>
-          {imagens.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              {imagens.map((img) => (
-                <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-[var(--border)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.nome} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button onClick={() => run(() => deleteArquivo(img.id, img.url, clienteId))}
-                      className="p-1.5 bg-red-600 rounded-full text-white hover:bg-red-700">
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <button onClick={() => imgRef.current?.click()} disabled={imgUploading}
-            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[var(--border)] rounded-lg hover:border-[var(--verde-escuro)] hover:bg-[var(--creme)] transition-colors disabled:opacity-50 text-sm text-[var(--muted-foreground)]">
-            <Upload size={16} /> Adicionar imagem
-          </button>
-          <input ref={imgRef} type="file" className="hidden" accept="image/*"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImagem(f); e.target.value = ""; }} />
-          {imgUploading && (
-            <div className="space-y-1 mt-2">
-              <div className="w-full bg-[var(--creme-escuro)] rounded-full h-1.5">
-                <div className="bg-[var(--verde-escuro)] h-1.5 rounded-full transition-all" style={{ width: `${imgProgress}%` }} />
-              </div>
-              <p className="text-xs text-[var(--muted-foreground)]">{imgProgress}% enviado</p>
-            </div>
-          )}
-          {imgErro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md mt-2">{imgErro}</p>}
         </Card>
       </div>
     );
