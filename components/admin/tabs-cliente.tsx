@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useCallback } from "react";
 import {
   User, FileText, Image as ImageIcon, Video, Calendar, BarChart2,
   CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2,
-  Lock, Unlock, KeyRound,
+  Lock, Unlock, KeyRound, Table2, BookOpen,
 } from "lucide-react";
 import {
   updateProfile, saveArquivo, deleteArquivo,
@@ -328,6 +328,7 @@ const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "panoramas", label: "Panoramas 360°", icon: ImageIcon },
   { id: "visual3d", label: "Visual 3D", icon: Video },
+  { id: "planilhas", label: "Planilhas", icon: Table2 },
   { id: "executivo_subs", label: "Executivo", icon: Building2 },
   { id: "arquivos", label: "Documentos", icon: FileText },
   { id: "progresso", label: "Progresso", icon: BarChart2 },
@@ -586,6 +587,79 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                   <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(v.id, "", clienteId))}>
                     <Trash2 size={12} />
                   </Btn>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // ── TAB: Planilhas & Cadernos ────────────────────────────
+  function TabPlanilhas() {
+    const planilhas = data.arquivos.filter(a => a.categoria === "planilha");
+    const cadernos  = data.arquivos.filter(a => a.categoria === "caderno");
+    const [pNome, setPNome] = useState("");
+    const [pUrl,  setPUrl]  = useState("");
+    const [cNome, setCNome] = useState("");
+    const [cUrl,  setCUrl]  = useState("");
+
+    function addPlanilha() {
+      if (!pNome || !pUrl) return;
+      run(async () => { await saveArquivo(clienteId, { nome: pNome, categoria: "planilha", url: pUrl }); setPNome(""); setPUrl(""); });
+    }
+    function addCaderno() {
+      if (!cNome || !cUrl) return;
+      run(async () => { await saveArquivo(clienteId, { nome: cNome, categoria: "caderno", url: cUrl }); setCNome(""); setCUrl(""); });
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Planilhas */}
+        <Card>
+          <SectionTitle><Table2 size={14} className="inline mr-1" />Adicionar planilha</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">Cole o link de publicação do Google Sheets (<em>Arquivo → Compartilhar → Publicar na web</em>).</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Título" value={pNome} onChange={(e) => setPNome(e.target.value)} placeholder="Ex: Especificações" />
+            <Input label="URL da planilha" value={pUrl} onChange={(e) => setPUrl(e.target.value)} placeholder="https://docs.google.com/..." />
+          </div>
+          <div className="mt-3"><Btn onClick={addPlanilha} disabled={isPending || !pNome || !pUrl}><Plus size={13} /> Adicionar planilha</Btn></div>
+        </Card>
+
+        {planilhas.length > 0 && (
+          <Card>
+            <SectionTitle>Planilhas ({planilhas.length})</SectionTitle>
+            <div className="space-y-2">
+              {planilhas.map((p) => (
+                <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                  <div><p className="text-sm font-medium">{p.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{p.url}</p></div>
+                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(p.id, "", clienteId))}><Trash2 size={12} /></Btn>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Cadernos */}
+        <Card>
+          <SectionTitle><BookOpen size={14} className="inline mr-1" />Adicionar caderno</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">Cole o link de apresentação do Canva do caderno de especificações.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Título" value={cNome} onChange={(e) => setCNome(e.target.value)} placeholder="Ex: Caderno de Acabamentos" />
+            <Input label="URL do Canva" value={cUrl} onChange={(e) => setCUrl(e.target.value)} placeholder="https://www.canva.com/..." />
+          </div>
+          <div className="mt-3"><Btn onClick={addCaderno} disabled={isPending || !cNome || !cUrl}><Plus size={13} /> Adicionar caderno</Btn></div>
+        </Card>
+
+        {cadernos.length > 0 && (
+          <Card>
+            <SectionTitle>Cadernos ({cadernos.length})</SectionTitle>
+            <div className="space-y-2">
+              {cadernos.map((c) => (
+                <div key={c.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                  <div><p className="text-sm font-medium">{c.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{c.url}</p></div>
+                  <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(c.id, "", clienteId))}><Trash2 size={12} /></Btn>
                 </div>
               ))}
             </div>
@@ -1180,6 +1254,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     perfil: <TabPerfil />,
     panoramas: <TabPanoramas />,
     visual3d: <TabVisual3D />,
+    planilhas: <TabPlanilhas />,
     executivo_subs: <TabExecutivoSubs />,
     arquivos: <TabArquivos />,
     cronograma: <TabCronograma />,
