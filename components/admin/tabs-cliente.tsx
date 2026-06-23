@@ -325,7 +325,6 @@ const TABS = [
   { id: "visual3d", label: "Visual 3D", icon: Video },
   { id: "executivo_subs", label: "Executivo", icon: Building2 },
   { id: "arquivos", label: "Documentos", icon: FileText },
-  { id: "cronograma", label: "Cronograma", icon: Calendar },
   { id: "progresso", label: "Progresso", icon: BarChart2 },
   { id: "aprovacoes", label: "Aprovações", icon: CheckSquare },
   { id: "reunioes", label: "Reuniões", icon: MessageSquare },
