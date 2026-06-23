@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createNewClient } from "@/app/admin/actions";
 
 export function NovoClienteModal() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -22,6 +24,7 @@ export function NovoClienteModal() {
         await createNewClient(email, password, nome, nomeProjeto);
         setOpen(false);
         setError("");
+        router.refresh();
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Erro ao criar cliente");
       }
