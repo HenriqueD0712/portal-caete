@@ -20,7 +20,7 @@ export const navigationSections: NavSection[] = [
       { id: "apresentacao3d", label: "Apresentação 3D", href: "/dashboard/midias/visual" },
       { id: "panoramas", label: "Panoramas 360°", href: "/dashboard/midias/panoramas" },
       { id: "executivo", label: "Executivo", href: "/dashboard/executivo", isDynamic: true },
-      { id: "planilhas", label: "Planilhas", href: "/dashboard/planilhas" },
+      { id: "planilhas", label: "Planilhas e Cadernos", href: "/dashboard/planilhas" },
     ],
   },
   {

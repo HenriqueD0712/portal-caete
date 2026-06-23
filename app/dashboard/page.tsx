@@ -10,7 +10,7 @@ const navCards = [
   { id: "apresentacao3d", label: "Apresentação 3D", href: "/dashboard/midias/visual",    icon: Layers,        desc: "Renders e visualizações" },
   { id: "panoramas",      label: "Panoramas 360°",  href: "/dashboard/midias/panoramas", icon: Eye,           desc: "Ambientes em 360°" },
   { id: "executivo",      label: "Executivo",        href: "/dashboard/executivo",        icon: Building2,     desc: "Projetos e documentos técnicos" },
-  { id: "planilhas",      label: "Planilhas",        href: "/dashboard/planilhas",        icon: Table2,        desc: "Orçamentos detalhados" },
+  { id: "planilhas",      label: "Planilhas e Cadernos", href: "/dashboard/planilhas",    icon: Table2,        desc: "Planilhas e cadernos do projeto" },
   { id: "orcamentos",     label: "Orçamentos",       href: "/dashboard/orcamentos",       icon: FileText,      desc: "Documentos e propostas" },
   { id: "reunioes",       label: "Reuniões",         href: "/dashboard/reunioes",         icon: MessageSquare, desc: "Atas e anotações" },
   { id: "cuidados",       label: "Cuidados",         href: "/dashboard/cuidados",         icon: Shield,        desc: "Guia de materiais" },
