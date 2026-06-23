@@ -4,13 +4,32 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Menu, X, LogOut } from "lucide-react";
+import {
+  Home, FileText, Calendar, BarChart2, Image as ImageIcon,
+  Eye, Building2, Hammer, Mountain, Shield, MessageSquare,
+  Table2, ChevronDown, ChevronRight, Menu, X, LogOut, Layers,
+} from "lucide-react";
 import { navigation } from "@/src/config/navigation";
-import { siteText } from "@/src/config/site-text";
 import { logout } from "@/app/actions/auth";
 import { cn } from "@/src/lib/utils";
 
-export function Sidebar() {
+const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  orcamentos: FileText,
+  cronograma: Calendar,
+  progresso: BarChart2,
+  midias: ImageIcon,
+  visual: Layers,
+  panoramas: Eye,
+  executivo: Building2,
+  obra: Building2,
+  marcenaria: Hammer,
+  marmoraria: Mountain,
+  cuidados: Shield,
+  reunioes: MessageSquare,
+  planilhas: Table2,
+};
+
+export function Sidebar({ nomeProjeto, nome }: { nomeProjeto?: string; nome?: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string[]>(["midias", "executivo"]);
@@ -22,15 +41,33 @@ export function Sidebar() {
   }
 
   const NavContent = () => (
-    <nav className="flex flex-col h-full">
+    <nav className="flex flex-col h-full bg-[var(--verde-escuro)]">
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-[var(--border)]">
-        <Image src="/logo.png" alt={siteText.siteName} width={130} height={52} className="h-auto" />
+      <div className="px-5 py-6 border-b border-white/10">
+        <Image src="/logo.png" alt="Estúdio Caeté" width={120} height={48} className="h-auto brightness-0 invert" />
       </div>
 
-      {/* Links */}
-      <ul className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+      {/* Home link */}
+      <div className="px-3 pt-4 pb-1">
+        <Link
+          href="/dashboard"
+          onClick={() => setOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+            pathname === "/dashboard"
+              ? "bg-[var(--terracota)] text-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <Home size={16} />
+          Início
+        </Link>
+      </div>
+
+      {/* Nav links */}
+      <ul className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
         {navigation.map((item) => {
+          const Icon = iconMap[item.id] ?? FileText;
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           const isExpanded = expanded.includes(item.id);
 
@@ -41,18 +78,22 @@ export function Sidebar() {
                   <button
                     onClick={() => toggleExpand(item.id)}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                      "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                       isActive
-                        ? "bg-[var(--verde-escuro)] text-white"
-                        : "text-[var(--foreground)] hover:bg-[var(--creme-escuro)]"
+                        ? "bg-white/15 text-white"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
                     )}
                   >
-                    {item.label}
-                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    <span className="flex items-center gap-3">
+                      <Icon size={15} />
+                      {item.label}
+                    </span>
+                    {isExpanded ? <ChevronDown size={13} className="opacity-60" /> : <ChevronRight size={13} className="opacity-60" />}
                   </button>
                   {isExpanded && (
-                    <ul className="mt-0.5 ml-3 pl-3 border-l border-[var(--border)] space-y-0.5">
+                    <ul className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
                       {item.subItems.map((sub) => {
+                        const SubIcon = iconMap[sub.id] ?? FileText;
                         const subActive = pathname === sub.href;
                         return (
                           <li key={sub.id}>
@@ -60,12 +101,13 @@ export function Sidebar() {
                               href={sub.href}
                               onClick={() => setOpen(false)}
                               className={cn(
-                                "block px-3 py-1.5 rounded-md text-sm transition-colors",
+                                "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all",
                                 subActive
-                                  ? "bg-[var(--verde-escuro)] text-white font-medium"
-                                  : "text-[var(--muted-foreground)] hover:bg-[var(--creme-escuro)] hover:text-[var(--foreground)]"
+                                  ? "bg-[var(--terracota)] text-white font-medium"
+                                  : "text-white/60 hover:bg-white/10 hover:text-white"
                               )}
                             >
+                              <SubIcon size={13} />
                               {sub.label}
                             </Link>
                           </li>
@@ -79,12 +121,13 @@ export function Sidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     isActive
-                      ? "bg-[var(--verde-escuro)] text-white"
-                      : "text-[var(--foreground)] hover:bg-[var(--creme-escuro)]"
+                      ? "bg-[var(--terracota)] text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   )}
                 >
+                  <Icon size={15} />
                   {item.label}
                 </Link>
               )}
@@ -93,12 +136,18 @@ export function Sidebar() {
         })}
       </ul>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-[var(--border)]">
+      {/* User + logout */}
+      <div className="p-3 border-t border-white/10">
+        {(nomeProjeto || nome) && (
+          <div className="px-3 py-2 mb-1">
+            {nomeProjeto && <p className="text-xs font-medium text-white truncate">{nomeProjeto}</p>}
+            {nome && <p className="text-xs text-white/50 truncate">{nome}</p>}
+          </div>
+        )}
         <form action={logout}>
           <button
             type="submit"
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-[var(--muted-foreground)] hover:bg-[var(--creme-escuro)] hover:text-[var(--foreground)] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/50 hover:bg-white/10 hover:text-white transition-all"
           >
             <LogOut size={14} />
             Sair
@@ -113,37 +162,30 @@ export function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-40 lg:hidden bg-white border border-[var(--border)] rounded-md p-2 shadow-sm"
+        className="fixed top-4 left-4 z-40 lg:hidden bg-[var(--verde-escuro)] border border-white/20 rounded-lg p-2 shadow-md"
       >
-        <Menu size={18} />
+        <Menu size={18} className="text-white" />
       </button>
 
-      {/* Mobile overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
       {/* Mobile drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transition-transform duration-300 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-64 shadow-2xl transition-transform duration-300 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <button
-          onClick={() => setOpen(false)}
-          className="absolute top-4 right-4 text-[var(--muted-foreground)]"
-        >
+        <button onClick={() => setOpen(false)} className="absolute top-4 right-4 text-white/60 hover:text-white z-10">
           <X size={18} />
         </button>
         <NavContent />
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-white border-r border-[var(--border)] min-h-screen sticky top-0">
+      <aside className="hidden lg:block w-64 shrink-0 min-h-screen sticky top-0">
         <NavContent />
       </aside>
     </>

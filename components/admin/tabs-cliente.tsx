@@ -247,7 +247,7 @@ function ArquivoUpload({ clienteId }: { clienteId: string }) {
   const [erro, setErro] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const categorias = ["orcamento", "obra", "marcenaria", "marmoraria", "ata", "outro"];
+  const categorias = ["orcamento", "obra", "marcenaria", "marmoraria", "ata", "destaque", "outro"];
 
   async function upload() {
     if (!file) return;

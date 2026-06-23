@@ -19,23 +19,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[var(--creme)]">
-      <Sidebar />
+      <Sidebar nomeProjeto={profile?.nome_projeto ?? undefined} nome={profile?.nome ?? undefined} />
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="bg-white border-b border-[var(--border)] px-6 py-4 flex items-center justify-between lg:pl-6 pl-16">
-          <div>
-            <p className="text-xs text-[var(--muted-foreground)] uppercase tracking-widest">Projeto</p>
-            <h2 className="font-sans font-semibold text-[var(--verde-escuro)]">
-              {profile?.nome_projeto ?? "Sem título"}
-            </h2>
-          </div>
-          <p className="text-sm text-[var(--muted-foreground)] hidden sm:block">
-            Olá, {profile?.nome ?? user.email}
-          </p>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 lg:p-8 lg:pl-8 pl-16">
           {children}
         </main>
       </div>
