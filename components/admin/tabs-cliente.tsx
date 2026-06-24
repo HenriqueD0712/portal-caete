@@ -601,7 +601,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     async function uploadPlanta(file: File) {
       setUploading(true); setErro(""); setProgress(0);
       try {
-        const chave = `arquivos/${clienteId}/${Date.now()}-planta-${file.name.replace(/\s/g, "_")}`;
+        const chave = `panoramas/${clienteId}/${Date.now()}-planta-${file.name.replace(/\s/g, "_")}`;
         const res = await fetch("/api/admin/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
