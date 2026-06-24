@@ -100,23 +100,26 @@ export function PanoramaViewer({ src, title }: Props) {
 
         let yaw: number, pitch: number;
         if (orient === 90 || orient === -270) {
-          // Landscape-left: inverte yaw (negativo = correto para VR)
           yaw   = ((-(e.alpha ?? 0) + 90) + 360) % 360;
           pitch = -(e.gamma ?? 0);
         } else if (orient === -90 || orient === 270) {
-          // Landscape-right
           yaw   = ((-(e.alpha ?? 0) - 90) + 360) % 360;
           pitch = (e.gamma ?? 0);
         } else {
-          // Portrait fallback
           yaw   = (360 - (e.alpha ?? 0)) % 360;
           pitch = 90 - (e.beta ?? 90);
         }
 
-        const clampedPitch = Math.max(-60, Math.min(60, pitch));
+        // Pitch pode ir até ±80° para permitir olhar para cima/baixo
+        const clampedPitch = Math.max(-80, Math.min(80, pitch));
 
-        // Filtro anti-spike: rejeita saltos bruscos de pitch > 25° (gimbal lock)
-        if (initialized && Math.abs(clampedPitch - targetPitch) > 25) return;
+        // Gimbal lock: quando |gamma| > 65° (celular quase vertical),
+        // o alpha salta ~180° de forma instável. Filtra só o YAW nessa zona.
+        const absGamma = Math.abs(e.gamma ?? 0);
+        if (initialized && absGamma > 65) {
+          const yawDiff = Math.abs(((yaw - targetYaw + 540) % 360) - 180);
+          if (yawDiff > 30) return; // rejeita salto de yaw causado por gimbal lock
+        }
 
         targetYaw   = yaw;
         targetPitch = clampedPitch;
@@ -194,11 +197,19 @@ export function PanoramaViewer({ src, title }: Props) {
     try { await (screen.orientation as any).lock("landscape"); } catch { /* iOS */ }
   }
 
-  function sairVR() {
+  async function sairVR() {
     setVrMode(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    try { (screen.orientation as any).unlock(); } catch { /* ignorar */ }
-    try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignorar */ }
+    const so = screen.orientation as any;
+    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* ignorar */ }
+    try {
+      // Força portrait momentaneamente para o SO rotacionar de volta,
+      // depois libera para rotação livre
+      await so.lock("portrait-primary");
+      so.unlock();
+    } catch {
+      try { so.unlock(); } catch { /* ignorar */ }
+    }
   }
 
   function entrarFullscreen() {
