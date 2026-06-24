@@ -81,6 +81,16 @@ export async function updateArquivo(id: string, data: { nome?: string; descricao
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
+export async function reorderPanoramas(updates: { id: string; ordem: number }[], clienteId: string) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  await Promise.all(updates.map(({ id, ordem }) =>
+    admin.from("arquivos").update({ ordem }).eq("id", id)
+  ));
+  revalidatePath(`/admin/clientes/${clienteId}`);
+  revalidatePath("/dashboard/midias/panoramas");
+}
+
 export async function deleteArquivo(id: string, chave: string, clienteId: string) {
   await checkAdmin();
   try { await deleteFile(chave); } catch {}

@@ -52,7 +52,7 @@ export async function getClientData(id: string) {
   const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados, reunioesAgendadas] = await Promise.all([
     admin.from("profiles").select("*").eq("id", id).single(),
     admin.from("arquivos").select("*").eq("cliente_id", id).neq("categoria", "panorama").order("created_at", { ascending: false }),
-    admin.from("arquivos").select("*").eq("cliente_id", id).eq("categoria", "panorama").order("created_at", { ascending: false }),
+    admin.from("arquivos").select("*").eq("cliente_id", id).eq("categoria", "panorama").order("ordem", { ascending: true }).order("created_at", { ascending: false }),
     admin.from("cronograma").select("*").eq("cliente_id", id).order("data_prevista"),
     admin.from("progresso").select("*").eq("cliente_id", id).order("ordem"),
     admin.from("aprovacoes").select("*").eq("cliente_id", id).order("created_at"),

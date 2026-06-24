@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback } from "react";
+import { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import {
   User, FileText, Image as ImageIcon, Video, Calendar, BarChart2,
   CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2,
-  Lock, Unlock, KeyRound, Table2, BookOpen,
+  Lock, Unlock, KeyRound, Table2, BookOpen, GripVertical,
 } from "lucide-react";
 import {
   updateProfile, saveArquivo, updateArquivo, deleteArquivo,
@@ -14,7 +14,7 @@ import {
   saveReuniao, updateReuniao, deleteReuniao,
   saveReuniaoAgendada, updateReuniaoAgendada, deleteReuniaoAgendada,
   saveCuidado, updateCuidado, deleteCuidado,
-  changeClientPassword,
+  changeClientPassword, reorderPanoramas,
 } from "@/app/admin/actions";
 
 // ── Types ──────────────────────────────────────────────────
@@ -24,7 +24,7 @@ type Profile = {
   data_entrega_criativo?: string; data_entrega_executivo?: string;
   subcategorias_executivo?: string[];
 };
-type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string };
+type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string; ordem?: number };
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
 type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string; bloqueado?: boolean };
@@ -478,11 +478,16 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
-  // ── Panoramas List (with inline edit) ────────────────────
-  function PanoramasList({ clienteId, panoramas, isPending, run }: { clienteId: string; panoramas: Arquivo[]; isPending: boolean; run: (fn: () => Promise<unknown>) => void }) {
+  // ── Panoramas Grid (com drag-to-reorder) ─────────────────
+  function PanoramasGrid({ clienteId, panoramas, isPending, run }: { clienteId: string; panoramas: Arquivo[]; isPending: boolean; run: (fn: () => Promise<unknown>) => void }) {
+    const [items, setItems] = useState(panoramas);
     const [editId, setEditId] = useState<string | null>(null);
     const [editNome, setEditNome] = useState("");
     const [editDesc, setEditDesc] = useState("");
+    const [dragOver, setDragOver] = useState<number | null>(null);
+    const dragIdx = useRef<number | null>(null);
+
+    useEffect(() => { setItems(panoramas); }, [panoramas]);
 
     function startEdit(p: Arquivo) { setEditId(p.id); setEditNome(p.nome); setEditDesc(p.descricao ?? ""); }
     function cancelEdit() { setEditId(null); setEditNome(""); setEditDesc(""); }
@@ -490,37 +495,90 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
       run(async () => { await updateArquivo(id, { nome: editNome, descricao: editDesc }, clienteId); cancelEdit(); });
     }
 
+    function handleDrop(toIdx: number) {
+      const fromIdx = dragIdx.current;
+      if (fromIdx === null || fromIdx === toIdx) { setDragOver(null); return; }
+      const next = [...items];
+      next.splice(toIdx, 0, next.splice(fromIdx, 1)[0]);
+      setItems(next);
+      setDragOver(null);
+      dragIdx.current = null;
+      run(async () => {
+        await reorderPanoramas(next.map((p, i) => ({ id: p.id, ordem: i })), clienteId);
+      });
+    }
+
     return (
       <Card>
-        <SectionTitle>Panoramas publicados ({panoramas.length})</SectionTitle>
-        <div className="space-y-2">
-          {panoramas.map((p) => editId === p.id ? (
-            <div key={p.id} className="py-2 border-b border-[var(--border)] last:border-0 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
-                <Input label="Descrição" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
-              </div>
-              <div className="flex gap-2">
-                <Btn onClick={() => saveEdit(p.id)} disabled={isPending || !editNome}><Check size={12} /> Salvar</Btn>
-                <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
-              </div>
+        <div className="flex items-center justify-between mb-3">
+          <SectionTitle>Panoramas publicados ({items.length})</SectionTitle>
+          <span className="text-xs text-[var(--muted-foreground)]">Arraste para reordenar</span>
+        </div>
+
+        {editId && (
+          <div className="mb-4 p-3 border border-[var(--verde-claro)] rounded-lg bg-[var(--creme-escuro)] space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Input label="Nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+              <Input label="Descrição" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
             </div>
-          ) : (
-            <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-              <div>
-                <p className="text-sm font-medium">{p.nome}</p>
-                {p.descricao && <p className="text-xs text-[var(--muted-foreground)]">{p.descricao}</p>}
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            <div className="flex gap-2">
+              <Btn onClick={() => saveEdit(editId)} disabled={isPending || !editNome}><Check size={12} /> Salvar</Btn>
+              <Btn variant="ghost" onClick={cancelEdit}>Cancelar</Btn>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          {items.map((p, idx) => (
+            <div
+              key={p.id}
+              draggable
+              onDragStart={() => { dragIdx.current = idx; }}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(idx); }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={() => handleDrop(idx)}
+              className={`border rounded-lg overflow-hidden bg-white transition-all cursor-grab active:cursor-grabbing ${
+                dragOver === idx ? "border-[var(--verde-escuro)] shadow-md scale-[1.02]" : "border-[var(--border)]"
+              } ${editId === p.id ? "ring-2 ring-[var(--verde-claro)]" : ""}`}
+            >
+              <div className="relative aspect-video bg-gray-100 overflow-hidden">
+                <img
+                  src={p.url}
+                  alt={p.nome}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+                <div className="absolute top-1.5 left-1.5 bg-black/50 rounded px-1.5 py-0.5">
+                  <GripVertical size={12} className="text-white" />
+                </div>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute top-1.5 right-1.5 bg-black/50 text-white text-xs px-2 py-0.5 rounded hover:bg-black/70"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Ver
+                </a>
+              </div>
+              <div className="p-2 space-y-1">
+                <p className="text-xs font-medium truncate">{p.nome}</p>
+                {p.descricao && <p className="text-xs text-[var(--muted-foreground)] truncate">{p.descricao}</p>}
+                <p className="text-xs text-[var(--muted-foreground)]">
                   {new Date(p.created_at).toLocaleDateString("pt-BR")}
                   {p.tamanho_bytes ? ` · ${(p.tamanho_bytes / 1024 / 1024).toFixed(1)} MB` : ""}
                 </p>
-              </div>
-              <div className="flex gap-2">
-                <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Ver</a>
-                <Btn variant="ghost" onClick={() => startEdit(p)}><Edit2 size={12} /></Btn>
-                <Btn variant="danger" disabled={isPending} onClick={() => { const chave = p.url.split("/").slice(-3).join("/"); run(() => deleteArquivo(p.id, chave, clienteId)); }}>
-                  <Trash2 size={12} />
-                </Btn>
+                <div className="flex gap-1 pt-1">
+                  <Btn variant="ghost" onClick={() => startEdit(p)} className="text-xs py-1 px-2"><Edit2 size={11} /> Editar</Btn>
+                  <Btn
+                    variant="danger"
+                    disabled={isPending}
+                    className="text-xs py-1 px-2"
+                    onClick={() => { const chave = p.url.split("/").slice(-3).join("/"); run(() => deleteArquivo(p.id, chave, clienteId)); }}
+                  >
+                    <Trash2 size={11} />
+                  </Btn>
+                </div>
               </div>
             </div>
           ))}
@@ -565,7 +623,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         </Card>
 
         {data.panoramas.length > 0 && (
-          <PanoramasList clienteId={clienteId} panoramas={data.panoramas} isPending={isPending} run={run} />
+          <PanoramasGrid clienteId={clienteId} panoramas={data.panoramas} isPending={isPending} run={run} />
         )}
       </div>
     );

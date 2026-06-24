@@ -8,7 +8,6 @@ interface Props {
   title: string;
 }
 
-
 export function PanoramaViewer({ src, title }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<{ destroy: () => void } | null>(null);
@@ -16,7 +15,6 @@ export function PanoramaViewer({ src, title }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [pannellumReady, setPannellumReady] = useState(false);
 
-  // Carrega Pannellum via CDN (não disponível como módulo ESM)
   useEffect(() => {
     if (document.getElementById("pannellum-css")) {
       setPannellumReady(true);
@@ -51,12 +49,19 @@ export function PanoramaViewer({ src, title }: Props) {
     return () => { viewerRef.current?.destroy(); };
   }, [pannellumReady, loaded, src]);
 
-  // Modo VR: full screen dividido em dois painéis com giroscópio
+  useEffect(() => {
+    if (!vrMode) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") sairVR();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [vrMode]);
+
   function ativarVR() {
-    if (!containerRef.current) return;
     setVrMode(true);
     const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === "function") {
@@ -66,36 +71,40 @@ export function PanoramaViewer({ src, title }: Props) {
 
   function sairVR() {
     setVrMode(false);
-    if (document.exitFullscreen) document.exitFullscreen();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
+
+  const embedUrl = `/panorama-embed.html?src=${encodeURIComponent(src)}`;
 
   if (vrMode) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex">
-        {/* Olho esquerdo */}
         <div className="w-1/2 h-full overflow-hidden">
           <iframe
-            src={src}
-            className="w-full h-full border-0 scale-110"
+            src={embedUrl}
+            className="w-full h-full border-0"
             title={`${title} - VR esquerdo`}
+            allow="gyroscope; accelerometer"
           />
         </div>
-        {/* Divisor */}
-        <div className="w-1 bg-black" />
-        {/* Olho direito */}
+        <div className="w-px bg-white/30" />
         <div className="w-1/2 h-full overflow-hidden">
           <iframe
-            src={src}
-            className="w-full h-full border-0 scale-110"
+            src={embedUrl}
+            className="w-full h-full border-0"
             title={`${title} - VR direito`}
+            allow="gyroscope; accelerometer"
           />
         </div>
         <button
           onClick={sairVR}
-          className="absolute top-4 right-4 bg-white/20 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm"
+          className="absolute top-4 right-4 bg-white/20 text-white text-xs px-4 py-2 rounded-full backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-colors"
         >
-          Sair do VR
+          ✕ Sair do VR
         </button>
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
+          Coloque o celular no óculos Google Cardboard
+        </p>
       </div>
     );
   }

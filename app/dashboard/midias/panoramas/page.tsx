@@ -10,6 +10,7 @@ export default async function PanoramasPage() {
     .select("id, nome, descricao, url")
     .eq("cliente_id", user!.id)
     .eq("categoria", "panorama")
+    .order("ordem", { ascending: true })
     .order("created_at", { ascending: false });
 
   return (
