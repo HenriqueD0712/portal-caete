@@ -100,18 +100,26 @@ export function PanoramaViewer({ src, title }: Props) {
 
         let yaw: number, pitch: number;
         if (orient === 90 || orient === -270) {
-          yaw   = ((e.alpha ?? 0) - 90 + 360) % 360;
+          // Landscape-left: inverte yaw (negativo = correto para VR)
+          yaw   = ((-(e.alpha ?? 0) + 90) + 360) % 360;
           pitch = -(e.gamma ?? 0);
         } else if (orient === -90 || orient === 270) {
-          yaw   = ((e.alpha ?? 0) + 90) % 360;
+          // Landscape-right
+          yaw   = ((-(e.alpha ?? 0) - 90) + 360) % 360;
           pitch = (e.gamma ?? 0);
         } else {
-          yaw   = e.alpha ?? 0;
+          // Portrait fallback
+          yaw   = (360 - (e.alpha ?? 0)) % 360;
           pitch = 90 - (e.beta ?? 90);
         }
 
+        const clampedPitch = Math.max(-60, Math.min(60, pitch));
+
+        // Filtro anti-spike: rejeita saltos bruscos de pitch > 25° (gimbal lock)
+        if (initialized && Math.abs(clampedPitch - targetPitch) > 25) return;
+
         targetYaw   = yaw;
-        targetPitch = Math.max(-75, Math.min(75, pitch));
+        targetPitch = clampedPitch;
         if (!initialized) { smoothYaw = targetYaw; smoothPitch = targetPitch; initialized = true; }
       }
 
