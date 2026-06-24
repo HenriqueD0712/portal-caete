@@ -55,7 +55,7 @@ export function PanoramaFloorPlan({ panoramas, plantaUrl }: Props) {
       */}
       <div className="-mx-4 sm:mx-0 sm:rounded-xl sm:border sm:border-[var(--border)] sm:bg-[var(--creme-escuro)]">
         {/* Container de posicionamento — separado do border para overflow-visible funcionar */}
-        <div className="relative pt-10 sm:pt-0">
+        <div className="relative">
           <img
             src={plantaUrl}
             alt="Planta do projeto"
