@@ -602,19 +602,54 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const imgRef = useRef<HTMLImageElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Converte qualquer imagem para WebP sem transparência (fundo branco)
+    // Isso garante que WebP com alpha, HEIC, PNG etc. sejam exibidos corretamente
+    async function normalizarImagem(file: File): Promise<File> {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const MAX = 4096;
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if (w > MAX || h > MAX) {
+            const r = Math.min(MAX / w, MAX / h);
+            w = Math.round(w * r); h = Math.round(h * r);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const nome = file.name.replace(/\.[^.]+$/, ".webp");
+              resolve(new File([blob], nome, { type: "image/webp" }));
+            } else {
+              resolve(file);
+            }
+          }, "image/webp", 0.92);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+        img.src = url;
+      });
+    }
+
     async function uploadPlanta(file: File) {
       setUploading(true); setErro(""); setProgress(0);
       try {
-        const chave = `panoramas/${clienteId}/${Date.now()}-planta-${file.name.replace(/\s/g, "_")}`;
+        const fileNormalizado = await normalizarImagem(file);
+        const chave = `panoramas/${clienteId}/${Date.now()}-planta-${fileNormalizado.name.replace(/\s/g, "_")}`;
         const res = await fetch("/api/admin/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chave, tipoArquivo: file.type }),
+          body: JSON.stringify({ chave, tipoArquivo: fileNormalizado.type }),
         });
         if (!res.ok) throw new Error("Falha ao obter URL de upload.");
         const { uploadUrl, publicUrl } = await res.json();
-        await xhrUpload(uploadUrl, file, setProgress);
-        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: file.type || "image/webp", tamanho_bytes: file.size });
+        await xhrUpload(uploadUrl, fileNormalizado, setProgress);
+        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: fileNormalizado.type, tamanho_bytes: fileNormalizado.size });
         if (planta) {
           // Extrai a chave R2 usando URL parsing (igual ao proxy)
           let chaveAntiga: string;
