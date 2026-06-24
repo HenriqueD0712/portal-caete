@@ -117,10 +117,15 @@ export function PanoramaViewer({ src, title }: Props) {
     }
     setVrMode(true);
     try { await document.documentElement.requestFullscreen(); } catch { /* ignorar */ }
+    // Força landscape após entrar em fullscreen (não funciona no iOS, mas está correto no Android)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { await (screen.orientation as any).lock("landscape"); } catch { /* iOS não suporta */ }
   }
 
   function sairVR() {
     setVrMode(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { (screen.orientation as any).unlock(); } catch { /* ignorar */ }
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignorar */ }
   }
 
