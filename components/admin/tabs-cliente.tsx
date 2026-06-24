@@ -624,12 +624,12 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           ctx.drawImage(img, 0, 0, w, h);
           canvas.toBlob((blob) => {
             if (blob) {
-              const nome = file.name.replace(/\.[^.]+$/, ".webp");
-              resolve(new File([blob], nome, { type: "image/webp" }));
+              const nome = file.name.replace(/\.[^.]+$/, ".jpg");
+              resolve(new File([blob], nome, { type: "image/jpeg" }));
             } else {
               resolve(file);
             }
-          }, "image/webp", 0.92);
+          }, "image/jpeg", 0.92);
         };
         img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
         img.src = url;
