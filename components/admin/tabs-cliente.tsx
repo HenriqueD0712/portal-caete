@@ -649,14 +649,8 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         if (!res.ok) throw new Error("Falha ao obter URL de upload.");
         const { uploadUrl, publicUrl } = await res.json();
         await xhrUpload(uploadUrl, fileNormalizado, setProgress);
+        // saveArquivo já deleta a planta antiga atomicamente no servidor
         await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: fileNormalizado.type, tamanho_bytes: fileNormalizado.size });
-        if (planta) {
-          // Extrai a chave R2 usando URL parsing (igual ao proxy)
-          let chaveAntiga: string;
-          try { chaveAntiga = new URL(planta.url).pathname.slice(1); }
-          catch { chaveAntiga = planta.url.split("/").slice(-3).join("/"); }
-          await deleteArquivo(planta.id, chaveAntiga, clienteId);
-        }
         router.refresh();
       } catch (e: unknown) {
         setErro(e instanceof Error ? e.message : "Erro desconhecido.");
@@ -704,7 +698,13 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           {planta && !uploading && (
             <div className="mt-3 space-y-1">
               <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden">
-                <img src={r2Proxy(planta.url)} alt="Preview da planta" className="w-full h-auto block" />
+                <img
+                  src={r2Proxy(planta.url)}
+                  alt="Preview da planta"
+                  className="w-full h-auto block"
+                  style={{ background: "#ffffff" }}
+                  onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                />
               </div>
             </div>
           )}
@@ -727,7 +727,15 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                   onClick={handleMapClick}
                 >
                   <div className="bg-white">
-                    <img ref={imgRef} src={r2Proxy(planta.url)} alt="Planta" className="w-full h-auto block" draggable={false} />
+                    <img
+                      ref={imgRef}
+                      src={r2Proxy(planta.url)}
+                      alt="Planta"
+                      className="w-full h-auto block"
+                      style={{ background: "#ffffff" }}
+                      draggable={false}
+                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                    />
                   </div>
                   {panoramas.filter(p => p.x_pos != null && p.y_pos != null).map((p) => {
                     const idx = panoramas.indexOf(p);

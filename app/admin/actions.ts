@@ -70,6 +70,23 @@ export async function saveArquivo(clienteId: string, data: {
 }) {
   await checkAdmin();
   const admin = createAdminClient();
+
+  // Para planta: substitui atomicamente no servidor (evita race condition no cliente)
+  if (data.categoria === "planta") {
+    const { data: existing } = await admin.from("arquivos")
+      .select("id, url")
+      .eq("cliente_id", clienteId)
+      .eq("categoria", "planta")
+      .maybeSingle();
+    if (existing) {
+      try {
+        const key = new URL(existing.url).pathname.slice(1);
+        await deleteFile(key);
+      } catch {}
+      await admin.from("arquivos").delete().eq("id", existing.id);
+    }
+  }
+
   await admin.from("arquivos").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
   revalidatePath("/dashboard/midias/panoramas");
