@@ -614,9 +614,12 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         if (!res.ok) throw new Error("Falha ao obter URL de upload.");
         const { uploadUrl, publicUrl } = await res.json();
         await xhrUpload(uploadUrl, file, setProgress);
-        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
+        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: file.type || "image/webp", tamanho_bytes: file.size });
         if (planta) {
-          const chaveAntiga = planta.url.split("/").slice(-3).join("/");
+          // Extrai a chave R2 usando URL parsing (igual ao proxy)
+          let chaveAntiga: string;
+          try { chaveAntiga = new URL(planta.url).pathname.slice(1); }
+          catch { chaveAntiga = planta.url.split("/").slice(-3).join("/"); }
           await deleteArquivo(planta.id, chaveAntiga, clienteId);
         }
         router.refresh();
