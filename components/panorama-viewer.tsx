@@ -57,8 +57,11 @@ export function PanoramaViewer({ src, title }: Props) {
   useEffect(() => {
     if (!vrMode || !pannellumReady) return;
 
-    // Aguarda o React renderizar as divs do VR antes de inicializar
-    const init = () => {
+    let rafId = 0;
+    // Guarda o cleanup do listener/RAF para chamá-lo no return do efeito
+    let innerCleanup: (() => void) | null = null;
+
+    const t = setTimeout(() => {
       if (!vrLeftRef.current || !vrRightRef.current) return;
 
       const config: Pannellum.ConfigOptions = {
@@ -73,16 +76,10 @@ export function PanoramaViewer({ src, title }: Props) {
       vrLeftViewer.current = window.pannellum.viewer(vrLeftRef.current, { ...config });
       vrRightViewer.current = window.pannellum.viewer(vrRightRef.current, { ...config });
 
-      // Valores alvo vindos do sensor (atualizados a cada evento)
-      let targetYaw = 0;
-      let targetPitch = 0;
-      // Valores suavizados que são aplicados ao viewer (atualizados pelo RAF)
-      let smoothYaw = 0;
-      let smoothPitch = 0;
+      let targetYaw = 0, targetPitch = 0;
+      let smoothYaw = 0, smoothPitch = 0;
       let initialized = false;
-      let rafId = 0;
 
-      // Interpola o ângulo pelo caminho mais curto, evitando saltos no wraparound 0↔360
       function lerpAngle(from: number, to: number, t: number) {
         let diff = to - from;
         while (diff > 180) diff -= 360;
@@ -90,25 +87,48 @@ export function PanoramaViewer({ src, title }: Props) {
         return from + diff * t;
       }
 
-      // Sensor: apenas grava os valores brutos, sem tocar no viewer
       function onOrientation(e: DeviceOrientationEvent) {
-        if (e.alpha === null || e.beta === null) return;
-        targetYaw = e.alpha ?? 0;
-        // beta 90° = celular ereto; inclinar para trás reduz beta → pitch positivo = olhar para cima
-        targetPitch = Math.max(-60, Math.min(60, 90 - (e.beta ?? 90)));
+        if (e.alpha === null || e.beta === null || e.gamma === null) return;
+
+        // Detecta ângulo da tela: 90 = landscape-left (mais comum no cardboard Android)
+        // window.orientation é fallback para Safari/iOS onde screen.orientation pode falhar
+        const orient: number =
+          screen.orientation?.angle ??
+          (typeof window.orientation === "number" ? window.orientation : 0);
+
+        let yaw: number;
+        let pitch: number;
+
+        if (orient === 90 || orient === -270) {
+          // Landscape-left: celular girado 90° anti-horário
+          // Em portrait: beta≈90° = ereto; em landscape-left: gamma≈0° = ereto
+          yaw   = ((e.alpha ?? 0) - 90 + 360) % 360;
+          pitch = -(e.gamma ?? 0); // gamma negativo quando inclina p/ cima em landscape-left
+        } else if (orient === -90 || orient === 270) {
+          // Landscape-right: celular girado 90° horário
+          yaw   = ((e.alpha ?? 0) + 90) % 360;
+          pitch = (e.gamma ?? 0);
+        } else {
+          // Portrait (fallback)
+          yaw   = e.alpha ?? 0;
+          pitch = 90 - (e.beta ?? 90);
+        }
+
+        targetYaw   = yaw;
+        targetPitch = Math.max(-75, Math.min(75, pitch));
+
         if (!initialized) {
-          smoothYaw = targetYaw;
+          smoothYaw   = targetYaw;
           smoothPitch = targetPitch;
           initialized = true;
         }
       }
 
-      // RAF: aplica interpolação suave a cada frame (~60fps)
-      // SMOOTH baixo = mais suave mas com leve lag; mais alto = mais responsivo mas pode tremer
-      const SMOOTH = 0.12;
+      // SMOOTH 0.25: responsivo mas sem tremor; subir = mais rápido, descer = mais suave
+      const SMOOTH = 0.25;
       function animate() {
         if (initialized) {
-          smoothYaw = lerpAngle(smoothYaw, targetYaw, SMOOTH);
+          smoothYaw   = lerpAngle(smoothYaw, targetYaw, SMOOTH);
           smoothPitch = smoothPitch + (targetPitch - smoothPitch) * SMOOTH;
           vrLeftViewer.current?.setYaw(smoothYaw, false);
           vrLeftViewer.current?.setPitch(smoothPitch, false);
@@ -121,16 +141,16 @@ export function PanoramaViewer({ src, title }: Props) {
       window.addEventListener("deviceorientation", onOrientation);
       rafId = requestAnimationFrame(animate);
 
-      return () => {
+      // Armazena cleanup para ser chamado pelo return do efeito
+      innerCleanup = () => {
         window.removeEventListener("deviceorientation", onOrientation);
         cancelAnimationFrame(rafId);
       };
-    };
+    }, 50);
 
-    // Pequeno delay para garantir que as refs estejam montadas
-    const t = setTimeout(init, 50);
     return () => {
       clearTimeout(t);
+      innerCleanup?.();           // limpa listener e RAF corretamente
       vrLeftViewer.current?.destroy();
       vrRightViewer.current?.destroy();
       vrLeftViewer.current = null;
