@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAllClients, getTotalStorage } from "./queries";
+import { getAllClients, getTotalStorage, getStoragePerClient } from "./queries";
 import { NovoClienteModal } from "@/components/admin/novo-cliente-modal";
 import { DeleteClientBtn } from "@/components/admin/delete-client-btn";
 import { Users, FolderOpen, Calendar, HardDrive } from "lucide-react";
@@ -14,9 +14,10 @@ function formatBytes(bytes: number): string {
 }
 
 export default async function AdminPage() {
-  const [clientes, totalBytes] = await Promise.all([
+  const [clientes, totalBytes, storagePerClient] = await Promise.all([
     getAllClients(),
     getTotalStorage(),
+    getStoragePerClient(),
   ]);
 
   return (
@@ -83,6 +84,12 @@ export default async function AdminPage() {
                   {c.nome_projeto}
                 </p>
               )}
+              <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center gap-1.5">
+                <HardDrive size={11} className="text-[var(--muted-foreground)] shrink-0" />
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {formatBytes(storagePerClient[c.id] ?? 0)} no R2
+                </span>
+              </div>
             </Link>
           ))}
         </div>

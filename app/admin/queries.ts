@@ -29,6 +29,33 @@ export async function getTotalStorage(): Promise<number> {
   return totalBytes;
 }
 
+// Retorna um mapa { clienteId: bytes } varrendo todos os objetos do R2.
+// Estrutura esperada das chaves: <pasta>/<clienteId>/...
+export async function getStoragePerClient(): Promise<Record<string, number>> {
+  const usage: Record<string, number> = {};
+  let continuationToken: string | undefined;
+
+  do {
+    const res = await r2.send(new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      ContinuationToken: continuationToken,
+    }));
+
+    for (const obj of res.Contents ?? []) {
+      const parts = obj.Key?.split("/") ?? [];
+      // chave: <prefixo>/<clienteId>/arquivo  → parts[1] é o clienteId
+      if (parts.length >= 2) {
+        const clienteId = parts[1];
+        usage[clienteId] = (usage[clienteId] ?? 0) + (obj.Size ?? 0);
+      }
+    }
+
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return usage;
+}
+
 async function checkAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
