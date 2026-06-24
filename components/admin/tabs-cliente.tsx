@@ -668,7 +668,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               <img
                 src={r2Proxy(planta.url)}
                 alt="Preview da planta"
-                className="w-full h-auto block rounded-lg border border-[var(--border)]"
+                className="w-full h-auto block rounded-lg border border-[var(--border)] bg-white"
               />
             </div>
           )}
@@ -694,7 +694,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                     ref={imgRef}
                     src={r2Proxy(planta.url)}
                     alt="Planta"
-                    className="w-full h-auto block"
+                    className="w-full h-auto block bg-white"
                     draggable={false}
                   />
                   {panoramas.filter(p => p.x_pos != null && p.y_pos != null).map((p) => {
