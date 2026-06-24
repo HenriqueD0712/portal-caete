@@ -49,60 +49,66 @@ export function PanoramaFloorPlan({ panoramas, plantaUrl }: Props) {
     <div className="space-y-6">
       <Header />
 
-      {/* Planta com marcadores */}
-      <div className="relative rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--creme-escuro)]">
-        <img
-          src={plantaUrl}
-          alt="Planta do projeto"
-          className="w-full h-auto block select-none"
-          draggable={false}
-        />
+      {/* Planta com marcadores
+          -mx-4 sm:mx-0: full-bleed no mobile (cancela o p-4 do layout)
+          overflow-visible: pins não são cortados nas bordas
+      */}
+      <div className="-mx-4 sm:mx-0 sm:rounded-xl sm:border sm:border-[var(--border)] sm:bg-[var(--creme-escuro)]">
+        {/* Container de posicionamento — separado do border para overflow-visible funcionar */}
+        <div className="relative pt-10 sm:pt-0">
+          <img
+            src={plantaUrl}
+            alt="Planta do projeto"
+            className="w-full h-auto block select-none sm:rounded-xl"
+            draggable={false}
+          />
 
-        {positioned.map((p) => {
-          const idx      = panoramas.indexOf(p);
-          const isSel    = selectedId === p.id;
-          return (
-            <button
-              key={p.id}
-              style={{
-                position: "absolute",
-                left: `${p.x_pos}%`,
-                top:  `${p.y_pos}%`,
-                transform: "translate(-50%, -100%)",
-              }}
-              onClick={() => setSelectedId(isSel ? null : p.id)}
-              title={p.nome}
-              className="group focus:outline-none"
-            >
-              {/* Corpo do pin */}
-              <div className={`flex flex-col items-center transition-all duration-200 ${isSel ? "scale-125" : "hover:scale-110"}`}>
-                {/* Círculo */}
-                <div className={`
-                  w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold
-                  border-2 border-white shadow-lg ring-2 transition-colors duration-200
-                  ${isSel
-                    ? "bg-[var(--verde-escuro)] text-white ring-[var(--verde-escuro)]"
-                    : "bg-white text-[var(--verde-escuro)] ring-white/60 group-hover:bg-[var(--verde-escuro)] group-hover:text-white group-hover:ring-[var(--verde-escuro)]"
-                  }`}>
-                  {idx + 1}
+          {positioned.map((p) => {
+            const idx      = panoramas.indexOf(p);
+            const isSel    = selectedId === p.id;
+            return (
+              <button
+                key={p.id}
+                style={{
+                  position: "absolute",
+                  left: `${p.x_pos}%`,
+                  top:  `${p.y_pos}%`,
+                  transform: "translate(-50%, -100%)",
+                }}
+                onClick={() => setSelectedId(isSel ? null : p.id)}
+                title={p.nome}
+                className="group focus:outline-none"
+              >
+                {/* Corpo do pin */}
+                <div className={`flex flex-col items-center transition-all duration-200 ${isSel ? "scale-125" : "hover:scale-110"}`}>
+                  {/* Círculo — menor no mobile */}
+                  <div className={`
+                    w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold
+                    border-2 border-white shadow-lg ring-2 transition-colors duration-200
+                    ${isSel
+                      ? "bg-[var(--verde-escuro)] text-white ring-[var(--verde-escuro)]"
+                      : "bg-white text-[var(--verde-escuro)] ring-white/60 group-hover:bg-[var(--verde-escuro)] group-hover:text-white group-hover:ring-[var(--verde-escuro)]"
+                    }`}>
+                    {idx + 1}
+                  </div>
+                  {/* Haste */}
+                  <div className={`w-0.5 h-2 sm:h-2.5 ${isSel ? "bg-[var(--verde-escuro)]" : "bg-white/80 group-hover:bg-[var(--verde-escuro)]"}`} />
+                  {/* Ponto base */}
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSel ? "bg-[var(--verde-escuro)]" : "bg-white/80 group-hover:bg-[var(--verde-escuro)]"}`} />
                 </div>
-                {/* Haste */}
-                <div className={`w-0.5 h-2.5 ${isSel ? "bg-[var(--verde-escuro)]" : "bg-white/80 group-hover:bg-[var(--verde-escuro)]"}`} />
-                {/* Ponto base */}
-                <div className={`w-1.5 h-1.5 rounded-full ${isSel ? "bg-[var(--verde-escuro)]" : "bg-white/80 group-hover:bg-[var(--verde-escuro)]"}`} />
-              </div>
 
-              {/* Tooltip com nome */}
-              <div className="
-                absolute bottom-full mb-1 left-1/2 -translate-x-1/2
-                bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap
-                opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10
-              ">
-                {p.nome}
-              </div>
-            </button>
-          );
-        })}
+                {/* Tooltip com nome */}
+                <div className="
+                  absolute bottom-full mb-1 left-1/2 -translate-x-1/2
+                  bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap
+                  opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10
+                ">
+                  {p.nome}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Hint quando nenhum panorama está selecionado */}
