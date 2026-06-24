@@ -74,11 +74,16 @@ export async function saveArquivo(clienteId: string, data: {
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
 
-export async function updateArquivo(id: string, data: { nome?: string; descricao?: string; url?: string }, clienteId: string) {
+export async function updateArquivo(
+  id: string,
+  data: { nome?: string; descricao?: string; url?: string; x_pos?: number | null; y_pos?: number | null },
+  clienteId: string
+) {
   await checkAdmin();
   const admin = createAdminClient();
   await admin.from("arquivos").update(data).eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
+  revalidatePath("/dashboard/midias/panoramas");
 }
 
 export async function reorderPanoramas(updates: { id: string; ordem: number }[], clienteId: string) {

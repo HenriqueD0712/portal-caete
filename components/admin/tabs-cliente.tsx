@@ -24,7 +24,7 @@ type Profile = {
   data_entrega_criativo?: string; data_entrega_executivo?: string;
   subcategorias_executivo?: string[];
 };
-type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string; ordem?: number };
+type Arquivo = { id: string; nome: string; descricao?: string; categoria: string; url: string; tipo_arquivo?: string; tamanho_bytes?: number; created_at: string; ordem?: number; x_pos?: number | null; y_pos?: number | null };
 type Cronograma = { id: string; titulo: string; descricao?: string; data_prevista: string; concluido: boolean };
 type Progresso = { id: string; etapa: string; item: string; percentual: number; status: string; ordem: number };
 type Aprovacao = { id: string; etapa: string; status: string; comentario?: string; updated_at: string; bloqueado?: boolean };
@@ -587,8 +587,148 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     );
   }
 
+  // ── Planta + Editor de hotspots ──────────────────────────
+  function FloorPlanSection({ planta, panoramas }: { planta: Arquivo | null; panoramas: Arquivo[] }) {
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [erro, setErro] = useState("");
+    const imgRef = useRef<HTMLImageElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    async function uploadPlanta(file: File) {
+      setUploading(true); setErro(""); setProgress(0);
+      try {
+        const chave = `arquivos/${clienteId}/${Date.now()}-planta-${file.name.replace(/\s/g, "_")}`;
+        const res = await fetch("/api/admin/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chave, tipoArquivo: file.type }),
+        });
+        if (!res.ok) throw new Error("Falha ao obter URL de upload.");
+        const { uploadUrl, publicUrl } = await res.json();
+        await xhrUpload(uploadUrl, file, setProgress);
+        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
+        if (planta) {
+          const chaveAntiga = planta.url.split("/").slice(-3).join("/");
+          await deleteArquivo(planta.id, chaveAntiga, clienteId);
+        }
+      } catch (e: unknown) {
+        setErro(e instanceof Error ? e.message : "Erro desconhecido.");
+      } finally { setUploading(false); setProgress(0); }
+    }
+
+    function handleMapClick(e: React.MouseEvent<HTMLDivElement>) {
+      if (!selectedId || !imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = Math.max(2, Math.min(98, ((e.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(2, Math.min(98, ((e.clientY - rect.top) / rect.height) * 100));
+      const id = selectedId;
+      setSelectedId(null);
+      run(async () => { await updateArquivo(id, { x_pos: x, y_pos: y }, clienteId); });
+    }
+
+    const selectedNome = panoramas.find(p => p.id === selectedId)?.nome;
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <SectionTitle>Planta do projeto</SectionTitle>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            Faça upload da planta baixa do projeto. Depois, posicione cada panorama 360° clicando na planta.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <input ref={inputRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPlanta(f); e.target.value = ""; }} />
+            <Btn variant="ghost" onClick={() => inputRef.current?.click()} disabled={uploading}>
+              <Upload size={13} /> {planta ? "Substituir planta" : "Upload da planta"}
+            </Btn>
+            {planta && <span className="text-xs text-green-600 font-medium">✓ Planta carregada</span>}
+          </div>
+          {uploading && (
+            <div className="mt-2 space-y-1">
+              <div className="h-1.5 bg-[var(--creme-escuro)] rounded-full overflow-hidden">
+                <div className="h-full bg-[var(--verde-escuro)] transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">{progress}%</p>
+            </div>
+          )}
+          {erro && <p className="text-xs text-red-600 mt-2">{erro}</p>}
+        </Card>
+
+        {planta && panoramas.length > 0 && (
+          <Card>
+            <SectionTitle>Posicionar panoramas na planta</SectionTitle>
+            {selectedId
+              ? <p className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2 mb-3">Clique na planta para posicionar: <strong>{selectedNome}</strong></p>
+              : <p className="text-xs text-[var(--muted-foreground)] mb-3">Selecione um panorama na lista e clique na planta para posicioná-lo.</p>
+            }
+            <div className="grid grid-cols-3 gap-4">
+              {/* Planta com marcadores */}
+              <div className="col-span-2">
+                <div
+                  className={`relative rounded-lg overflow-hidden border-2 transition-colors select-none ${
+                    selectedId ? "border-[var(--verde-escuro)] cursor-crosshair" : "border-[var(--border)]"
+                  }`}
+                  onClick={handleMapClick}
+                >
+                  <img ref={imgRef} src={planta.url} alt="Planta" className="w-full h-auto block" draggable={false} />
+                  {panoramas.filter(p => p.x_pos != null && p.y_pos != null).map((p) => {
+                    const idx = panoramas.indexOf(p);
+                    const isSel = selectedId === p.id;
+                    return (
+                      <button key={p.id}
+                        style={{ position: "absolute", left: `${p.x_pos}%`, top: `${p.y_pos}%`, transform: "translate(-50%,-50%)" }}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-md transition-all
+                          ${isSel ? "bg-[var(--verde-escuro)] text-white scale-125" : "bg-white text-[var(--verde-escuro)] hover:scale-110"}`}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(p.id === selectedId ? null : p.id); }}
+                        title={p.nome}
+                      >{idx + 1}</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Lista de panoramas */}
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {panoramas.map((p, i) => (
+                  <div key={p.id}
+                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${
+                      selectedId === p.id ? "border-[var(--verde-escuro)] bg-[var(--creme-escuro)]" : "border-[var(--border)] hover:bg-[var(--creme-escuro)]"
+                    }`}
+                    onClick={() => setSelectedId(p.id === selectedId ? null : p.id)}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        p.x_pos != null ? "bg-[var(--verde-escuro)] text-white" : "bg-gray-200 text-gray-500"}`}>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{p.nome}</p>
+                        <p className={`text-xs ${p.x_pos != null ? "text-green-600" : "text-[var(--muted-foreground)]"}`}>
+                          {p.x_pos != null ? "✓ Posicionado" : "Sem posição"}
+                        </p>
+                      </div>
+                    </div>
+                    {p.x_pos != null && (
+                      <button className="mt-1 text-xs text-red-500 hover:text-red-700"
+                        onClick={(e) => { e.stopPropagation(); run(async () => { await updateArquivo(p.id, { x_pos: null, y_pos: null }, clienteId); if (selectedId === p.id) setSelectedId(null); }); }}>
+                        Remover posição
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
   // ── TAB: Panoramas 360° ──────────────────────────────────
   function TabPanoramas() {
+    const planta = data.arquivos.find(a => a.categoria === "planta") ?? null;
     const [corsOk, setCorsOk] = useState<boolean | null>(null);
 
     async function configurarCors() {
@@ -614,13 +754,13 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
             Se o upload ficar em 0%, clique abaixo para configurar o CORS do R2 (necessário apenas uma vez).
           </p>
           <div className="flex items-center gap-3">
-            <Btn variant="ghost" onClick={configurarCors}>
-              Configurar CORS do R2
-            </Btn>
-            {corsOk === true && <span className="text-xs text-green-600 font-medium">✓ CORS configurado! Tente o upload novamente.</span>}
+            <Btn variant="ghost" onClick={configurarCors}>Configurar CORS do R2</Btn>
+            {corsOk === true && <span className="text-xs text-green-600 font-medium">✓ CORS configurado!</span>}
             {corsOk === false && <span className="text-xs text-red-600">Erro ao configurar. Verifique as variáveis R2 no Vercel.</span>}
           </div>
         </Card>
+
+        <FloorPlanSection planta={planta} panoramas={data.panoramas} />
 
         {data.panoramas.length > 0 && (
           <PanoramasGrid clienteId={clienteId} panoramas={data.panoramas} isPending={isPending} run={run} />
