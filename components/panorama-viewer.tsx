@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Glasses, Maximize2 } from "lucide-react";
+import { Glasses, Maximize2, Minimize2 } from "lucide-react";
 
 interface Props {
   src: string;
@@ -11,44 +11,51 @@ interface Props {
 type PannellumViewer = Pannellum.Viewer;
 
 export function PanoramaViewer({ src, title }: Props) {
+  const wrapperRef   = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const vrLeftRef = useRef<HTMLDivElement>(null);
-  const vrRightRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<PannellumViewer | null>(null);
-  const vrLeftViewer = useRef<PannellumViewer | null>(null);
+  const vrLeftRef    = useRef<HTMLDivElement>(null);
+  const vrRightRef   = useRef<HTMLDivElement>(null);
+  const viewerRef    = useRef<PannellumViewer | null>(null);
+  const vrLeftViewer  = useRef<PannellumViewer | null>(null);
   const vrRightViewer = useRef<PannellumViewer | null>(null);
 
-  const [vrMode, setVrMode] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  // Touch VR: offset acumulado pelo arraste (somado ao giroscópio)
+  const touchOffsetYaw   = useRef(0);
+  const touchOffsetPitch = useRef(0);
+  const lastTouch        = useRef<{ x: number; y: number } | null>(null);
+
+  const [vrMode,       setVrMode]       = useState(false);
+  const [loaded,       setLoaded]       = useState(false);
   const [pannellumReady, setPannellumReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Carrega Pannellum via CDN
   useEffect(() => {
     if (window.pannellum) { setPannellumReady(true); return; }
     if (document.getElementById("pannellum-css")) return;
-
     const link = document.createElement("link");
-    link.id = "pannellum-css";
-    link.rel = "stylesheet";
+    link.id = "pannellum-css"; link.rel = "stylesheet";
     link.href = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css";
     document.head.appendChild(link);
-
     const script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js";
     script.onload = () => setPannellumReady(true);
     document.body.appendChild(script);
   }, []);
 
+  // Rastreia se o wrapper está em fullscreen
+  useEffect(() => {
+    function onChange() { setIsFullscreen(!!document.fullscreenElement); }
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
   // Visualizador normal
   useEffect(() => {
     if (!pannellumReady || !loaded || !containerRef.current || vrMode) return;
     viewerRef.current = window.pannellum.viewer(containerRef.current, {
-      type: "equirectangular",
-      panorama: src,
-      autoLoad: true,
-      showControls: false,
-      compass: false,
-      hfov: 100,
+      type: "equirectangular", panorama: src,
+      autoLoad: true, showControls: false, compass: false, hfov: 100,
     });
     return () => { viewerRef.current?.destroy(); viewerRef.current = null; };
   }, [pannellumReady, loaded, src, vrMode]);
@@ -58,23 +65,21 @@ export function PanoramaViewer({ src, title }: Props) {
     if (!vrMode || !pannellumReady) return;
 
     let rafId = 0;
-    // Guarda o cleanup do listener/RAF para chamá-lo no return do efeito
     let innerCleanup: (() => void) | null = null;
 
     const t = setTimeout(() => {
       if (!vrLeftRef.current || !vrRightRef.current) return;
 
       const config: Pannellum.ConfigOptions = {
-        type: "equirectangular",
-        panorama: src,
-        autoLoad: true,
-        showControls: false,
-        compass: false,
-        hfov: 90,
+        type: "equirectangular", panorama: src,
+        autoLoad: true, showControls: false, compass: false, hfov: 90,
       };
-
-      vrLeftViewer.current = window.pannellum.viewer(vrLeftRef.current, { ...config });
+      vrLeftViewer.current  = window.pannellum.viewer(vrLeftRef.current,  { ...config });
       vrRightViewer.current = window.pannellum.viewer(vrRightRef.current, { ...config });
+
+      // Zera offsets de toque ao entrar no VR
+      touchOffsetYaw.current   = 0;
+      touchOffsetPitch.current = 0;
 
       let targetYaw = 0, targetPitch = 0;
       let smoothYaw = 0, smoothPitch = 0;
@@ -82,66 +87,54 @@ export function PanoramaViewer({ src, title }: Props) {
 
       function lerpAngle(from: number, to: number, t: number) {
         let diff = to - from;
-        while (diff > 180) diff -= 360;
+        while (diff >  180) diff -= 360;
         while (diff < -180) diff += 360;
         return from + diff * t;
       }
 
       function onOrientation(e: DeviceOrientationEvent) {
         if (e.alpha === null || e.beta === null || e.gamma === null) return;
-
-        // Detecta ângulo da tela: 90 = landscape-left (mais comum no cardboard Android)
-        // window.orientation é fallback para Safari/iOS onde screen.orientation pode falhar
         const orient: number =
           screen.orientation?.angle ??
           (typeof window.orientation === "number" ? window.orientation : 0);
 
-        let yaw: number;
-        let pitch: number;
-
+        let yaw: number, pitch: number;
         if (orient === 90 || orient === -270) {
-          // Landscape-left: celular girado 90° anti-horário
-          // Em portrait: beta≈90° = ereto; em landscape-left: gamma≈0° = ereto
           yaw   = ((e.alpha ?? 0) - 90 + 360) % 360;
-          pitch = -(e.gamma ?? 0); // gamma negativo quando inclina p/ cima em landscape-left
+          pitch = -(e.gamma ?? 0);
         } else if (orient === -90 || orient === 270) {
-          // Landscape-right: celular girado 90° horário
           yaw   = ((e.alpha ?? 0) + 90) % 360;
           pitch = (e.gamma ?? 0);
         } else {
-          // Portrait (fallback)
           yaw   = e.alpha ?? 0;
           pitch = 90 - (e.beta ?? 90);
         }
 
         targetYaw   = yaw;
         targetPitch = Math.max(-75, Math.min(75, pitch));
-
-        if (!initialized) {
-          smoothYaw   = targetYaw;
-          smoothPitch = targetPitch;
-          initialized = true;
-        }
+        if (!initialized) { smoothYaw = targetYaw; smoothPitch = targetPitch; initialized = true; }
       }
 
-      // SMOOTH 0.25: responsivo mas sem tremor; subir = mais rápido, descer = mais suave
       const SMOOTH = 0.25;
       function animate() {
         if (initialized) {
           smoothYaw   = lerpAngle(smoothYaw, targetYaw, SMOOTH);
           smoothPitch = smoothPitch + (targetPitch - smoothPitch) * SMOOTH;
-          vrLeftViewer.current?.setYaw(smoothYaw, false);
-          vrLeftViewer.current?.setPitch(smoothPitch, false);
-          vrRightViewer.current?.setYaw(smoothYaw, false);
-          vrRightViewer.current?.setPitch(smoothPitch, false);
+
+          // Toque adiciona offset sobre o valor do giroscópio
+          const finalYaw   = smoothYaw + touchOffsetYaw.current;
+          const finalPitch = Math.max(-75, Math.min(75, smoothPitch + touchOffsetPitch.current));
+
+          vrLeftViewer.current?.setYaw(finalYaw, false);
+          vrLeftViewer.current?.setPitch(finalPitch, false);
+          vrRightViewer.current?.setYaw(finalYaw, false);
+          vrRightViewer.current?.setPitch(finalPitch, false);
         }
         rafId = requestAnimationFrame(animate);
       }
 
       window.addEventListener("deviceorientation", onOrientation);
       rafId = requestAnimationFrame(animate);
-
-      // Armazena cleanup para ser chamado pelo return do efeito
       innerCleanup = () => {
         window.removeEventListener("deviceorientation", onOrientation);
         cancelAnimationFrame(rafId);
@@ -150,7 +143,7 @@ export function PanoramaViewer({ src, title }: Props) {
 
     return () => {
       clearTimeout(t);
-      innerCleanup?.();           // limpa listener e RAF corretamente
+      innerCleanup?.();
       vrLeftViewer.current?.destroy();
       vrRightViewer.current?.destroy();
       vrLeftViewer.current = null;
@@ -158,7 +151,7 @@ export function PanoramaViewer({ src, title }: Props) {
     };
   }, [vrMode, pannellumReady, src]);
 
-  // Tecla Escape sai do VR
+  // Escape sai do VR
   useEffect(() => {
     if (!vrMode) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") sairVR(); };
@@ -166,18 +159,31 @@ export function PanoramaViewer({ src, title }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [vrMode]);
 
+  // Handlers de toque do VR
+  function onVRTouchStart(e: React.TouchEvent) {
+    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  function onVRTouchMove(e: React.TouchEvent) {
+    if (!lastTouch.current) return;
+    const dx = e.touches[0].clientX - lastTouch.current.x;
+    const dy = e.touches[0].clientY - lastTouch.current.y;
+    touchOffsetYaw.current   -= dx * 0.25;   // sensibilidade horizontal
+    touchOffsetPitch.current += dy * 0.25;   // sensibilidade vertical
+    touchOffsetPitch.current  = Math.max(-75, Math.min(75, touchOffsetPitch.current));
+    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  function onVRTouchEnd() { lastTouch.current = null; }
+
   async function ativarVR() {
-    // Solicita permissão do giroscópio no iOS
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === "function") {
-      try { await DOE.requestPermission(); } catch { /* usuário negou */ }
+      try { await DOE.requestPermission(); } catch { /* negado */ }
     }
     setVrMode(true);
     try { await document.documentElement.requestFullscreen(); } catch { /* ignorar */ }
-    // Força landscape após entrar em fullscreen (não funciona no iOS, mas está correto no Android)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    try { await (screen.orientation as any).lock("landscape"); } catch { /* iOS não suporta */ }
+    try { await (screen.orientation as any).lock("landscape"); } catch { /* iOS */ }
   }
 
   function sairVR() {
@@ -187,24 +193,27 @@ export function PanoramaViewer({ src, title }: Props) {
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignorar */ }
   }
 
+  function entrarFullscreen() {
+    wrapperRef.current?.requestFullscreen?.();
+  }
+
+  function sairFullscreen() {
+    try { document.exitFullscreen(); } catch { /* ignorar */ }
+  }
+
+  // ── Modo VR ───────────────────────────────────────────────
   if (vrMode) {
     return (
       <div
-        style={{
-          position: "fixed", inset: 0, zIndex: 9999,
-          background: "#000", display: "flex",
-        }}
+        onTouchStart={onVRTouchStart}
+        onTouchMove={onVRTouchMove}
+        onTouchEnd={onVRTouchEnd}
+        style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", display: "flex" }}
       >
-        {/* Olho esquerdo */}
-        <div ref={vrLeftRef} style={{ width: "50%", height: "100%", overflow: "hidden" }} />
-
-        {/* Divisor central */}
+        <div ref={vrLeftRef}  style={{ width: "50%", height: "100%", overflow: "hidden" }} />
         <div style={{ width: 2, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />
-
-        {/* Olho direito */}
         <div ref={vrRightRef} style={{ width: "50%", height: "100%", overflow: "hidden" }} />
 
-        {/* Botão sair — renderizado fora dos viewers, sem iframe, recebe cliques normalmente */}
         <button
           onClick={sairVR}
           style={{
@@ -223,12 +232,13 @@ export function PanoramaViewer({ src, title }: Props) {
           transform: "translateX(-50%)", color: "rgba(255,255,255,0.35)",
           fontSize: 11, whiteSpace: "nowrap", pointerEvents: "none",
         }}>
-          Gire o celular para explorar o ambiente
+          Arraste para girar · Mova a cabeça com o giroscópio
         </p>
       </div>
     );
   }
 
+  // ── Tela de carregamento ──────────────────────────────────
   if (!loaded) {
     return (
       <div
@@ -244,9 +254,11 @@ export function PanoramaViewer({ src, title }: Props) {
     );
   }
 
+  // ── Visualizador normal ───────────────────────────────────
   return (
-    <div className="relative aspect-video rounded-lg overflow-hidden">
+    <div ref={wrapperRef} className="relative aspect-video rounded-lg overflow-hidden">
       <div ref={containerRef} className="w-full h-full" />
+
       <div className="absolute bottom-3 right-3 flex gap-2">
         <button
           onClick={ativarVR}
@@ -256,13 +268,24 @@ export function PanoramaViewer({ src, title }: Props) {
           <Glasses size={14} />
           Modo VR
         </button>
-        <button
-          onClick={() => containerRef.current?.requestFullscreen?.()}
-          title="Tela cheia"
-          className="bg-black/60 text-white p-1.5 rounded-full backdrop-blur-sm hover:bg-black/80 transition-colors"
-        >
-          <Maximize2 size={14} />
-        </button>
+
+        {isFullscreen ? (
+          <button
+            onClick={sairFullscreen}
+            title="Sair da tela cheia"
+            className="bg-black/60 text-white p-1.5 rounded-full backdrop-blur-sm hover:bg-black/80 transition-colors"
+          >
+            <Minimize2 size={14} />
+          </button>
+        ) : (
+          <button
+            onClick={entrarFullscreen}
+            title="Tela cheia"
+            className="bg-black/60 text-white p-1.5 rounded-full backdrop-blur-sm hover:bg-black/80 transition-colors"
+          >
+            <Maximize2 size={14} />
+          </button>
+        )}
       </div>
     </div>
   );
