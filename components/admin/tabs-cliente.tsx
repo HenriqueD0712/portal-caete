@@ -589,6 +589,10 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
   }
 
   // ── Planta + Editor de hotspots ──────────────────────────
+  function r2Proxy(url: string) {
+    return `/api/r2-proxy?url=${encodeURIComponent(url)}`;
+  }
+
   function FloorPlanSection({ planta, panoramas }: { planta: Arquivo | null; panoramas: Arquivo[] }) {
     const router = useRouter();
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -662,14 +666,10 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           {planta && !uploading && (
             <div className="mt-3 space-y-1">
               <img
-                src={planta.url}
+                src={r2Proxy(planta.url)}
                 alt="Preview da planta"
                 className="w-full h-auto block rounded-lg border border-[var(--border)]"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.removeAttribute("hidden"); }}
               />
-              <p hidden className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2 break-all">
-                ⚠️ Imagem não carregou. URL: <a href={planta.url} target="_blank" rel="noreferrer" className="underline">{planta.url}</a>
-              </p>
             </div>
           )}
         </Card>
@@ -692,15 +692,11 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                 >
                   <img
                     ref={imgRef}
-                    src={planta.url}
+                    src={r2Proxy(planta.url)}
                     alt="Planta"
                     className="w-full h-auto block"
                     draggable={false}
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.removeAttribute("hidden"); }}
                   />
-                  <p hidden className="text-xs text-red-600 p-3 break-all">
-                    ⚠️ Imagem não carregou. <a href={planta.url} target="_blank" rel="noreferrer" className="underline">Abrir URL</a>
-                  </p>
                   {panoramas.filter(p => p.x_pos != null && p.y_pos != null).map((p) => {
                     const idx = panoramas.indexOf(p);
                     const isSel = selectedId === p.id;

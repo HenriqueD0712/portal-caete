@@ -23,9 +23,14 @@ export default async function PanoramasPage() {
       .limit(1),
   ]);
 
-  const plantaUrl = plantasResult.data?.[0]?.url ?? null;
+  const rawPlantaUrl = plantasResult.data?.[0]?.url ?? null;
+  const plantaUrl = rawPlantaUrl
+    ? `/api/r2-proxy?url=${encodeURIComponent(rawPlantaUrl)}`
+    : null;
+
   const panoramas = (panoramasResult.data ?? []).map(p => ({
     ...p,
+    url: `/api/r2-proxy?url=${encodeURIComponent(p.url)}`,
     x_pos: p.x_pos ?? null,
     y_pos: p.y_pos ?? null,
   }));
