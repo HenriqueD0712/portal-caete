@@ -73,20 +73,58 @@ export function PanoramaViewer({ src, title }: Props) {
       vrLeftViewer.current = window.pannellum.viewer(vrLeftRef.current, { ...config });
       vrRightViewer.current = window.pannellum.viewer(vrRightRef.current, { ...config });
 
-      // Giroscópio: sincroniza os dois viewers com o movimento do celular
+      // Valores alvo vindos do sensor (atualizados a cada evento)
+      let targetYaw = 0;
+      let targetPitch = 0;
+      // Valores suavizados que são aplicados ao viewer (atualizados pelo RAF)
+      let smoothYaw = 0;
+      let smoothPitch = 0;
+      let initialized = false;
+      let rafId = 0;
+
+      // Interpola o ângulo pelo caminho mais curto, evitando saltos no wraparound 0↔360
+      function lerpAngle(from: number, to: number, t: number) {
+        let diff = to - from;
+        while (diff > 180) diff -= 360;
+        while (diff < -180) diff += 360;
+        return from + diff * t;
+      }
+
+      // Sensor: apenas grava os valores brutos, sem tocar no viewer
       function onOrientation(e: DeviceOrientationEvent) {
         if (e.alpha === null || e.beta === null) return;
-        const yaw = e.alpha;
-        // beta: 90° = celular em pé (portrait). Inclinar para trás = olhar para cima
-        const pitch = 90 - (e.beta ?? 90);
-        vrLeftViewer.current?.setYaw(yaw, false);
-        vrLeftViewer.current?.setPitch(pitch, false);
-        vrRightViewer.current?.setYaw(yaw, false);
-        vrRightViewer.current?.setPitch(pitch, false);
+        targetYaw = e.alpha ?? 0;
+        // beta 90° = celular ereto; inclinar para trás reduz beta → pitch positivo = olhar para cima
+        targetPitch = Math.max(-60, Math.min(60, 90 - (e.beta ?? 90)));
+        if (!initialized) {
+          smoothYaw = targetYaw;
+          smoothPitch = targetPitch;
+          initialized = true;
+        }
+      }
+
+      // RAF: aplica interpolação suave a cada frame (~60fps)
+      // SMOOTH baixo = mais suave mas com leve lag; mais alto = mais responsivo mas pode tremer
+      const SMOOTH = 0.12;
+      function animate() {
+        if (initialized) {
+          smoothYaw = lerpAngle(smoothYaw, targetYaw, SMOOTH);
+          smoothPitch = smoothPitch + (targetPitch - smoothPitch) * SMOOTH;
+          vrLeftViewer.current?.setYaw(smoothYaw, false);
+          vrLeftViewer.current?.setPitch(smoothPitch, false);
+          vrRightViewer.current?.setYaw(smoothYaw, false);
+          vrRightViewer.current?.setPitch(smoothPitch, false);
+        }
+        rafId = requestAnimationFrame(animate);
       }
 
       window.addEventListener("deviceorientation", onOrientation);
-      return () => window.removeEventListener("deviceorientation", onOrientation);
+      rafId = requestAnimationFrame(animate);
+
+      return () => {
+        window.removeEventListener("deviceorientation", onOrientation);
+        cancelAnimationFrame(rafId);
+      };
     };
 
     // Pequeno delay para garantir que as refs estejam montadas
