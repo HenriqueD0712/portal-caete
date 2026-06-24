@@ -123,9 +123,9 @@ export function PanoramaFloorPlan({ panoramas, plantaUrl }: Props) {
         <div className="rounded-xl border border-[var(--border)] bg-white p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-semibold text-[var(--verde-escuro)]">{selected.nome}</p>
+              <p className="text-lg font-semibold text-[var(--verde-escuro)]">{selected.nome}</p>
               {selected.descricao && (
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{selected.descricao}</p>
+                <p className="text-sm text-[var(--muted-foreground)] mt-0.5">{selected.descricao}</p>
               )}
             </div>
             <button
@@ -185,8 +185,8 @@ export function PanoramaFloorPlan({ panoramas, plantaUrl }: Props) {
 function Header() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[var(--verde-escuro)]">Panoramas 360°</h1>
-      <p className="text-sm text-[var(--muted-foreground)] mt-1">
+      <h1 className="text-3xl font-semibold text-[var(--verde-escuro)]">Panoramas 360°</h1>
+      <p className="text-base text-[var(--muted-foreground)] mt-1">
         Explore os ambientes em 360°. No celular, ative o Modo VR para usar com óculos Google Cardboard.
       </p>
     </div>

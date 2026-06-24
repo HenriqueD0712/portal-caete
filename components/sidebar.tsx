@@ -92,7 +92,7 @@ export function Sidebar({
 
           return (
             <div key={section.id} className={idx > 0 ? "pt-4 border-t border-white/10" : ""}>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 px-3 mb-1.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/30 px-3 mb-1.5">
                 {section.label}
               </p>
               <ul className="space-y-0.5">
@@ -179,9 +179,9 @@ export function Sidebar({
         {(nomeProjeto || nome) && (
           <div className="px-3 py-2 mb-1">
             {nomeProjeto && (
-              <p className="text-xs font-medium text-white truncate">{nomeProjeto}</p>
+              <p className="text-sm font-medium text-white truncate">{nomeProjeto}</p>
             )}
-            {nome && <p className="text-xs text-white/50 truncate">{nome}</p>}
+            {nome && <p className="text-sm text-white/50 truncate">{nome}</p>}
           </div>
         )}
         <form action={logout}>

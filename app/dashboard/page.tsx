@@ -64,7 +64,7 @@ export default async function DashboardPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--verde-escuro)] to-[var(--verde-medio)]" />
         )}
         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-          <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] mb-1">Projeto</p>
+          <p className="text-white/50 text-xs uppercase tracking-[0.2em] mb-1">Projeto</p>
           <h1 className="font-display text-2xl sm:text-3xl text-white leading-tight font-semibold">
             {profile?.nome_projeto ?? "Meu Projeto"}
           </h1>
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
 
       {/* ── Progresso ── */}
       <section>
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Progresso do Projeto</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Progresso do Projeto</h2>
         <div className="bg-white rounded-2xl border border-[var(--border)] divide-y divide-[var(--border)]">
           {[
             { label: "Etapa Criativa", pct: pCriativo, data: dataCriativo, gradient: "linear-gradient(90deg, var(--terracota), var(--terracota-claro))" },
@@ -85,10 +85,10 @@ export default async function DashboardPage() {
             <div key={label} className="px-5 py-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-semibold">{label}</p>
+                  <p className="text-base font-semibold">{label}</p>
                   {data && (
-                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
-                      <Calendar size={10} /> Prazo: {data}
+                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
+                      <Calendar size={11} /> Prazo: {data}
                     </p>
                   )}
                 </div>
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
       {/* ── Próximas Reuniões ── */}
       {agenda.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Próximas Reuniões</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Próximas Reuniões</h2>
           <div className="space-y-3">
             {agenda.map((r) => {
               const data = new Date(r.data_reuniao + "T12:00:00");
@@ -131,26 +131,26 @@ export default async function DashboardPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>
-                      <span className="text-xs text-[var(--muted-foreground)]">às {r.horario.slice(0, 5)}</span>
+                      <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>
+                      <span className="text-sm text-[var(--muted-foreground)]">às {r.horario.slice(0, 5)}</span>
                     </div>
-                    {r.assunto && <p className="text-sm font-semibold text-[var(--foreground)] leading-tight">{r.assunto}</p>}
+                    {r.assunto && <p className="text-base font-semibold text-[var(--foreground)] leading-tight">{r.assunto}</p>}
                     <div className="flex items-center gap-1.5 mt-1.5">
                       {r.modalidade === "online" ? (
                         <>
-                          <Video size={13} className="text-blue-500 shrink-0" />
-                          <span className="text-xs text-[var(--muted-foreground)]">Online</span>
+                          <Video size={14} className="text-blue-500 shrink-0" />
+                          <span className="text-sm text-[var(--muted-foreground)]">Online</span>
                           {r.link_reuniao && (
                             <a href={r.link_reuniao} target="_blank" rel="noopener noreferrer"
-                              className="ml-1 flex items-center gap-1 text-xs font-medium text-[var(--verde-escuro)] hover:underline">
-                              Entrar na reunião <ExternalLink size={11} />
+                              className="ml-1 flex items-center gap-1 text-sm font-medium text-[var(--verde-escuro)] hover:underline">
+                              Entrar na reunião <ExternalLink size={12} />
                             </a>
                           )}
                         </>
                       ) : (
                         <>
-                          <MapPin size={13} className="text-[var(--terracota)] shrink-0" />
-                          <span className="text-xs text-[var(--muted-foreground)]">{r.local_reuniao ?? "Presencial"}</span>
+                          <MapPin size={14} className="text-[var(--terracota)] shrink-0" />
+                          <span className="text-sm text-[var(--muted-foreground)]">{r.local_reuniao ?? "Presencial"}</span>
                         </>
                       )}
                     </div>
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
       {/* ── Aprovações ── */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Aprovações</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Aprovações</h2>
         </div>
         <AprovacoesCliente aprovacoes={aprovacoes} />
       </section>
@@ -174,8 +174,8 @@ export default async function DashboardPage() {
       {cronograma.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Próximas Entregas</h2>
-            <Link href="/dashboard/cronograma" className="text-xs text-[var(--terracota)] hover:underline flex items-center gap-1 font-medium">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Próximas Entregas</h2>
+            <Link href="/dashboard/cronograma" className="text-sm text-[var(--terracota)] hover:underline flex items-center gap-1 font-medium">
               Ver todas <ChevronRight size={12} />
             </Link>
           </div>
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
                 <div key={item.titulo} className="flex items-center justify-between px-5 py-3.5 gap-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${atrasado ? "bg-[var(--terracota)]" : "bg-[var(--verde-claro)]"}`} />
-                    <span className="text-sm">{item.titulo}</span>
+                    <span className="text-base">{item.titulo}</span>
                   </div>
-                  <span className={`text-xs shrink-0 font-medium ${atrasado ? "text-[var(--terracota)]" : "text-[var(--muted-foreground)]"}`}>
+                  <span className={`text-sm shrink-0 font-medium ${atrasado ? "text-[var(--terracota)]" : "text-[var(--muted-foreground)]"}`}>
                     {data.toLocaleDateString("pt-BR")}
                   </span>
                 </div>
@@ -201,21 +201,21 @@ export default async function DashboardPage() {
 
       {/* ── Navegação Rápida ── */}
       <section>
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Seções do Portal</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--muted-foreground)] mb-3">Seções do Portal</h2>
 
         {/* Mobile: lista vertical elegante */}
         <div className="sm:hidden bg-white rounded-2xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
           {navCards.map(({ id, label, href, icon: Icon, desc }) => (
             <Link key={id} href={href}
               className="flex items-center gap-4 px-5 py-4 active:bg-[var(--creme)] transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
-                <Icon size={17} className="text-[var(--verde-escuro)]" />
+              <div className="w-11 h-11 rounded-xl bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
+                <Icon size={19} className="text-[var(--verde-escuro)]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold leading-tight">{label}</p>
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5 truncate">{desc}</p>
+                <p className="text-base font-semibold leading-tight">{label}</p>
+                <p className="text-sm text-[var(--muted-foreground)] mt-0.5 truncate">{desc}</p>
               </div>
-              <ChevronRight size={15} className="text-[var(--muted-foreground)] shrink-0" />
+              <ChevronRight size={16} className="text-[var(--muted-foreground)] shrink-0" />
             </Link>
           ))}
         </div>
@@ -225,12 +225,12 @@ export default async function DashboardPage() {
           {navCards.map(({ id, label, href, icon: Icon, desc }) => (
             <Link key={id} href={href}
               className="group bg-white rounded-xl border border-[var(--border)] p-4 hover:border-[var(--terracota)] hover:shadow-md transition-all duration-200 flex flex-col gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center group-hover:bg-[var(--terracota)] transition-colors duration-200">
-                <Icon size={16} className="text-[var(--verde-escuro)] group-hover:text-white transition-colors duration-200" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center group-hover:bg-[var(--terracota)] transition-colors duration-200">
+                <Icon size={18} className="text-[var(--verde-escuro)] group-hover:text-white transition-colors duration-200" />
               </div>
               <div>
-                <p className="text-sm font-semibold">{label}</p>
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5 leading-relaxed">{desc}</p>
+                <p className="text-base font-semibold">{label}</p>
+                <p className="text-sm text-[var(--muted-foreground)] mt-0.5 leading-relaxed">{desc}</p>
               </div>
             </Link>
           ))}
