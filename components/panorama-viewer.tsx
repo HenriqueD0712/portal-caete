@@ -8,18 +8,25 @@ interface Props {
   title: string;
 }
 
+type PannellumViewer = Pannellum.Viewer;
+
 export function PanoramaViewer({ src, title }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<{ destroy: () => void } | null>(null);
+  const vrLeftRef = useRef<HTMLDivElement>(null);
+  const vrRightRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<PannellumViewer | null>(null);
+  const vrLeftViewer = useRef<PannellumViewer | null>(null);
+  const vrRightViewer = useRef<PannellumViewer | null>(null);
+
   const [vrMode, setVrMode] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [pannellumReady, setPannellumReady] = useState(false);
 
+  // Carrega Pannellum via CDN
   useEffect(() => {
-    if (document.getElementById("pannellum-css")) {
-      setPannellumReady(true);
-      return;
-    }
+    if (window.pannellum) { setPannellumReady(true); return; }
+    if (document.getElementById("pannellum-css")) return;
+
     const link = document.createElement("link");
     link.id = "pannellum-css";
     link.rel = "stylesheet";
@@ -32,9 +39,9 @@ export function PanoramaViewer({ src, title }: Props) {
     document.body.appendChild(script);
   }, []);
 
+  // Visualizador normal
   useEffect(() => {
-    if (!pannellumReady || !loaded || !containerRef.current) return;
-
+    if (!pannellumReady || !loaded || !containerRef.current || vrMode) return;
     viewerRef.current = window.pannellum.viewer(containerRef.current, {
       type: "equirectangular",
       panorama: src,
@@ -42,68 +49,118 @@ export function PanoramaViewer({ src, title }: Props) {
       showControls: false,
       compass: false,
       hfov: 100,
-      pitch: 0,
-      yaw: 0,
     });
+    return () => { viewerRef.current?.destroy(); viewerRef.current = null; };
+  }, [pannellumReady, loaded, src, vrMode]);
 
-    return () => { viewerRef.current?.destroy(); };
-  }, [pannellumReady, loaded, src]);
+  // Visualizadores VR + giroscópio
+  useEffect(() => {
+    if (!vrMode || !pannellumReady) return;
 
+    // Aguarda o React renderizar as divs do VR antes de inicializar
+    const init = () => {
+      if (!vrLeftRef.current || !vrRightRef.current) return;
+
+      const config: Pannellum.ConfigOptions = {
+        type: "equirectangular",
+        panorama: src,
+        autoLoad: true,
+        showControls: false,
+        compass: false,
+        hfov: 90,
+      };
+
+      vrLeftViewer.current = window.pannellum.viewer(vrLeftRef.current, { ...config });
+      vrRightViewer.current = window.pannellum.viewer(vrRightRef.current, { ...config });
+
+      // Giroscópio: sincroniza os dois viewers com o movimento do celular
+      function onOrientation(e: DeviceOrientationEvent) {
+        if (e.alpha === null || e.beta === null) return;
+        const yaw = e.alpha;
+        // beta: 90° = celular em pé (portrait). Inclinar para trás = olhar para cima
+        const pitch = 90 - (e.beta ?? 90);
+        vrLeftViewer.current?.setYaw(yaw, false);
+        vrLeftViewer.current?.setPitch(pitch, false);
+        vrRightViewer.current?.setYaw(yaw, false);
+        vrRightViewer.current?.setPitch(pitch, false);
+      }
+
+      window.addEventListener("deviceorientation", onOrientation);
+      return () => window.removeEventListener("deviceorientation", onOrientation);
+    };
+
+    // Pequeno delay para garantir que as refs estejam montadas
+    const t = setTimeout(init, 50);
+    return () => {
+      clearTimeout(t);
+      vrLeftViewer.current?.destroy();
+      vrRightViewer.current?.destroy();
+      vrLeftViewer.current = null;
+      vrRightViewer.current = null;
+    };
+  }, [vrMode, pannellumReady, src]);
+
+  // Tecla Escape sai do VR
   useEffect(() => {
     if (!vrMode) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") sairVR();
-    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") sairVR(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [vrMode]);
 
-  function ativarVR() {
-    setVrMode(true);
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  async function ativarVR() {
+    // Solicita permissão do giroscópio no iOS
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === "function") {
-      DOE.requestPermission();
+      try { await DOE.requestPermission(); } catch { /* usuário negou */ }
     }
+    setVrMode(true);
+    try { await document.documentElement.requestFullscreen(); } catch { /* ignorar */ }
   }
 
   function sairVR() {
     setVrMode(false);
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignorar */ }
   }
-
-  const embedUrl = `/panorama-embed.html?src=${encodeURIComponent(src)}`;
 
   if (vrMode) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex">
-        <div className="w-1/2 h-full overflow-hidden">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full border-0"
-            title={`${title} - VR esquerdo`}
-            allow="gyroscope; accelerometer"
-          />
-        </div>
-        <div className="w-px bg-white/30" />
-        <div className="w-1/2 h-full overflow-hidden">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full border-0"
-            title={`${title} - VR direito`}
-            allow="gyroscope; accelerometer"
-          />
-        </div>
+      <div
+        style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "#000", display: "flex",
+        }}
+      >
+        {/* Olho esquerdo */}
+        <div ref={vrLeftRef} style={{ width: "50%", height: "100%", overflow: "hidden" }} />
+
+        {/* Divisor central */}
+        <div style={{ width: 2, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />
+
+        {/* Olho direito */}
+        <div ref={vrRightRef} style={{ width: "50%", height: "100%", overflow: "hidden" }} />
+
+        {/* Botão sair — renderizado fora dos viewers, sem iframe, recebe cliques normalmente */}
         <button
           onClick={sairVR}
-          className="absolute top-4 right-4 bg-white/20 text-white text-xs px-4 py-2 rounded-full backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-colors"
+          style={{
+            position: "absolute", top: 16, right: 16, zIndex: 10000,
+            background: "rgba(0,0,0,0.75)", color: "#fff",
+            border: "1px solid rgba(255,255,255,0.4)", borderRadius: 9999,
+            padding: "8px 18px", fontSize: 13, cursor: "pointer",
+            backdropFilter: "blur(8px)",
+          }}
         >
           ✕ Sair do VR
         </button>
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
-          Coloque o celular no óculos Google Cardboard
+
+        <p style={{
+          position: "absolute", bottom: 12, left: "50%",
+          transform: "translateX(-50%)", color: "rgba(255,255,255,0.35)",
+          fontSize: 11, whiteSpace: "nowrap", pointerEvents: "none",
+        }}>
+          Gire o celular para explorar o ambiente
         </p>
       </div>
     );
