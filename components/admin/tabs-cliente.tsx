@@ -668,11 +668,9 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           {/* Preview da planta */}
           {planta && !uploading && (
             <div className="mt-3 space-y-1">
-              <img
-                src={r2Proxy(planta.url)}
-                alt="Preview da planta"
-                className="w-full h-auto block rounded-lg border border-[var(--border)] bg-white"
-              />
+              <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden">
+                <img src={r2Proxy(planta.url)} alt="Preview da planta" className="w-full h-auto block" />
+              </div>
             </div>
           )}
         </Card>
@@ -693,13 +691,9 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                   }`}
                   onClick={handleMapClick}
                 >
-                  <img
-                    ref={imgRef}
-                    src={r2Proxy(planta.url)}
-                    alt="Planta"
-                    className="w-full h-auto block bg-white"
-                    draggable={false}
-                  />
+                  <div className="bg-white">
+                    <img ref={imgRef} src={r2Proxy(planta.url)} alt="Planta" className="w-full h-auto block" draggable={false} />
+                  </div>
                   {panoramas.filter(p => p.x_pos != null && p.y_pos != null).map((p) => {
                     const idx = panoramas.indexOf(p);
                     const isSel = selectedId === p.id;

@@ -11,9 +11,8 @@ function mimeFromKey(key: string): string {
     jpeg: "image/jpeg",
     gif:  "image/gif",
     avif: "image/avif",
-    heic: "image/heic",
   };
-  return map[ext] ?? "application/octet-stream";
+  return map[ext] ?? "image/jpeg";
 }
 
 export function keyFromUrl(storedUrl: string): string {
@@ -33,7 +32,6 @@ export async function GET(req: NextRequest) {
   if (!storedUrl) return new NextResponse("Missing url", { status: 400 });
 
   const key = keyFromUrl(storedUrl);
-
   const signedUrl = await getDownloadUrl(key);
   const upstream = await fetch(signedUrl);
 
@@ -41,16 +39,19 @@ export async function GET(req: NextRequest) {
     return new NextResponse(`R2 error: ${upstream.status}`, { status: upstream.status });
   }
 
-  // Usa Content-Type do R2; se genérico, infere pela extensão do arquivo
   const r2Type = upstream.headers.get("content-type") ?? "";
   const contentType = (r2Type && r2Type !== "application/octet-stream")
     ? r2Type
     : mimeFromKey(key);
 
-  return new NextResponse(upstream.body, {
+  // Lê todos os bytes explicitamente (evita problemas de pipe de stream binário)
+  const data = await upstream.arrayBuffer();
+
+  return new NextResponse(data, {
     status: 200,
     headers: {
       "Content-Type": contentType,
+      "Content-Length": data.byteLength.toString(),
       "Cache-Control": "private, max-age=3600",
     },
   });
