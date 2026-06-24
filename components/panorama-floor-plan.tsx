@@ -55,7 +55,6 @@ export function PanoramaFloorPlan({ panoramas, plantaUrl }: Props) {
           src={plantaUrl}
           alt="Planta do projeto"
           className="w-full h-auto block select-none"
-          style={{ background: "#fff" }}
           draggable={false}
         />
 

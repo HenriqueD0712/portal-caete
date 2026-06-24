@@ -602,55 +602,20 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     const imgRef = useRef<HTMLImageElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Converte qualquer imagem para WebP sem transparência (fundo branco)
-    // Isso garante que WebP com alpha, HEIC, PNG etc. sejam exibidos corretamente
-    async function normalizarImagem(file: File): Promise<File> {
-      return new Promise((resolve) => {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          const MAX = 4096;
-          let w = img.naturalWidth, h = img.naturalHeight;
-          if (w > MAX || h > MAX) {
-            const r = Math.min(MAX / w, MAX / h);
-            w = Math.round(w * r); h = Math.round(h * r);
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext("2d")!;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const nome = file.name.replace(/\.[^.]+$/, ".jpg");
-              resolve(new File([blob], nome, { type: "image/jpeg" }));
-            } else {
-              resolve(file);
-            }
-          }, "image/jpeg", 0.92);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-        img.src = url;
-      });
-    }
-
     async function uploadPlanta(file: File) {
       setUploading(true); setErro(""); setProgress(0);
       try {
-        const fileNormalizado = await normalizarImagem(file);
-        const chave = `panoramas/${clienteId}/${Date.now()}-planta-${fileNormalizado.name.replace(/\s/g, "_")}`;
+        const chave = `panoramas/${clienteId}/${Date.now()}-planta-${file.name.replace(/\s/g, "_")}`;
         const res = await fetch("/api/admin/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chave, tipoArquivo: fileNormalizado.type }),
+          body: JSON.stringify({ chave, tipoArquivo: file.type }),
         });
         if (!res.ok) throw new Error("Falha ao obter URL de upload.");
         const { uploadUrl, publicUrl } = await res.json();
-        await xhrUpload(uploadUrl, fileNormalizado, setProgress);
+        await xhrUpload(uploadUrl, file, setProgress);
         // saveArquivo já deleta a planta antiga atomicamente no servidor
-        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: fileNormalizado.type, tamanho_bytes: fileNormalizado.size });
+        await saveArquivo(clienteId, { nome: "Planta do projeto", categoria: "planta", url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
         router.refresh();
       } catch (e: unknown) {
         setErro(e instanceof Error ? e.message : "Erro desconhecido.");
@@ -702,7 +667,6 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                   src={r2Proxy(planta.url)}
                   alt="Preview da planta"
                   className="w-full h-auto block"
-                  style={{ background: "#ffffff" }}
                   onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
                 />
               </div>
@@ -732,7 +696,6 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                       src={r2Proxy(planta.url)}
                       alt="Planta"
                       className="w-full h-auto block"
-                      style={{ background: "#ffffff" }}
                       draggable={false}
                       onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
                     />
