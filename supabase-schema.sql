@@ -43,8 +43,16 @@ create table if not exists arquivos (
   url          text not null,
   tipo_arquivo text,
   tamanho_bytes bigint,
+  ordem        integer default 0,
+  x_pos        float,
+  y_pos        float,
   created_at   timestamptz default now()
 );
+
+-- MIGRAÇÃO (rodar no SQL Editor do Supabase se a tabela já existia):
+-- alter table arquivos add column if not exists ordem integer default 0;
+-- alter table arquivos add column if not exists x_pos float;
+-- alter table arquivos add column if not exists y_pos float;
 
 
 -- 3. CRONOGRAMA

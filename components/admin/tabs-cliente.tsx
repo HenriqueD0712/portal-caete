@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   User, FileText, Image as ImageIcon, Video, Calendar, BarChart2,
   CheckSquare, MessageSquare, Shield, Trash2, Plus, Check, Edit2, Upload, X, Building2,
@@ -589,6 +590,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   // ── Planta + Editor de hotspots ──────────────────────────
   function FloorPlanSection({ planta, panoramas }: { planta: Arquivo | null; panoramas: Arquivo[] }) {
+    const router = useRouter();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -613,6 +615,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           const chaveAntiga = planta.url.split("/").slice(-3).join("/");
           await deleteArquivo(planta.id, chaveAntiga, clienteId);
         }
+        router.refresh();
       } catch (e: unknown) {
         setErro(e instanceof Error ? e.message : "Erro desconhecido.");
       } finally { setUploading(false); setProgress(0); }
@@ -654,6 +657,13 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
             </div>
           )}
           {erro && <p className="text-xs text-red-600 mt-2">{erro}</p>}
+
+          {/* Preview da planta */}
+          {planta && !uploading && (
+            <div className="mt-3 rounded-lg overflow-hidden border border-[var(--border)] max-h-48">
+              <img src={planta.url} alt="Preview da planta" className="w-full h-full object-contain bg-[var(--creme-escuro)]" />
+            </div>
+          )}
         </Card>
 
         {planta && panoramas.length > 0 && (

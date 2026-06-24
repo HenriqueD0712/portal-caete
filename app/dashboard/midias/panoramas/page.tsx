@@ -5,7 +5,7 @@ export default async function PanoramasPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: panoramas }, { data: plantas }] = await Promise.all([
+  const [panoramasResult, plantasResult] = await Promise.all([
     supabase
       .from("arquivos")
       .select("id, nome, descricao, url, x_pos, y_pos")
@@ -23,7 +23,12 @@ export default async function PanoramasPage() {
       .limit(1),
   ]);
 
-  const plantaUrl = plantas?.[0]?.url ?? null;
+  const plantaUrl = plantasResult.data?.[0]?.url ?? null;
+  const panoramas = (panoramasResult.data ?? []).map(p => ({
+    ...p,
+    x_pos: p.x_pos ?? null,
+    y_pos: p.y_pos ?? null,
+  }));
 
-  return <PanoramaFloorPlan panoramas={panoramas ?? []} plantaUrl={plantaUrl} />;
+  return <PanoramaFloorPlan panoramas={panoramas} plantaUrl={plantaUrl} />;
 }

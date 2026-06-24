@@ -72,6 +72,7 @@ export async function saveArquivo(clienteId: string, data: {
   const admin = createAdminClient();
   await admin.from("arquivos").insert({ cliente_id: clienteId, ...data });
   revalidatePath(`/admin/clientes/${clienteId}`);
+  revalidatePath("/dashboard/midias/panoramas");
 }
 
 export async function updateArquivo(
