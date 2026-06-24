@@ -22,16 +22,8 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-[var(--creme)] px-4">
 
-      {/* Overlay de carregamento pós-login */}
-      {loading && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--creme)]">
-          <Image src="/logo.png" alt={siteText.siteName} width={180} height={72} className="w-40 h-auto mb-8 opacity-80" />
-          <div className="w-9 h-9 rounded-full border-[3px] border-[var(--verde-escuro)] border-t-transparent animate-spin" />
-          <p className="text-base text-[var(--muted-foreground)] mt-4">Carregando portal...</p>
-        </div>
-      )}
 
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
+<div className="w-full max-w-sm flex flex-col items-center gap-8">
 
         <div className="w-44">
           <Image
@@ -86,9 +78,12 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="h-11 w-full rounded-md bg-[var(--verde-escuro)] text-white text-base font-medium hover:bg-[var(--verde-medio)] disabled:opacity-60 transition-colors"
+              className="h-11 w-full rounded-md bg-[var(--verde-escuro)] text-white text-base font-medium hover:bg-[var(--verde-medio)] disabled:opacity-70 transition-colors flex items-center justify-center gap-2"
             >
-              Entrar
+              {loading && (
+                <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin shrink-0" />
+              )}
+              {loading ? "Entrando..." : "Entrar"}
             </button>
           </form>
         </div>
