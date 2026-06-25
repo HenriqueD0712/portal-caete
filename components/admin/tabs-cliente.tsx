@@ -246,80 +246,60 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
   );
 }
 
-// ── Arquivo Upload (documentos) ────────────────────────────
-function ArquivoUpload({ clienteId, subcategoriasExecutivo = [] }: { clienteId: string; subcategoriasExecutivo?: string[] }) {
-  const [file, setFile] = useState<File | null>(null);
+// ── Drive Link Form (documentos via Google Drive) ──────────
+function DriveArquivoForm({ clienteId, subcategoriasExecutivo = [] }: { clienteId: string; subcategoriasExecutivo?: string[] }) {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("orcamento");
-  const [progress, setProgress] = useState(0);
-  const [uploading, setUploading] = useState(false);
+  const [driveUrl, setDriveUrl] = useState("");
   const [done, setDone] = useState(false);
   const [erro, setErro] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
 
-  const categorias = ["orcamento", "contrato", "destaque", "outro", ...subcategoriasExecutivo];
+  const categorias = ["orcamento", "contrato", "outro", ...subcategoriasExecutivo];
 
-  async function upload() {
-    if (!file) return;
-    setUploading(true);
+  async function salvar() {
+    if (!nome || !driveUrl) return;
+    if (!driveUrl.includes("drive.google.com") && !driveUrl.includes("docs.google.com")) {
+      setErro("Cole um link do Google Drive válido (deve conter drive.google.com).");
+      return;
+    }
+    setSaving(true);
     setErro("");
-    setProgress(0);
     try {
-      const chave = `arquivos/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
-      const res = await fetch("/api/admin/upload-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chave, tipoArquivo: file.type }),
-      });
-      if (!res.ok) throw new Error("Falha ao obter URL de upload.");
-      const { uploadUrl, publicUrl } = await res.json();
-
-      await xhrUpload(uploadUrl, file, setProgress);
-
-      await saveArquivo(clienteId, { nome: nome || file.name, descricao, categoria, url: publicUrl, tipo_arquivo: file.type, tamanho_bytes: file.size });
-      setDone(true); setFile(null); setNome(""); setDescricao("");
+      await saveArquivo(clienteId, { nome, descricao, categoria, url: driveUrl, tipo_arquivo: "drive" });
+      setDone(true); setNome(""); setDescricao(""); setDriveUrl("");
       setTimeout(() => setDone(false), 3000);
     } catch (e: unknown) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido.");
+      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
     } finally {
-      setUploading(false); setProgress(0);
+      setSaving(false);
     }
   }
 
   return (
     <div className="space-y-3 p-4 border border-dashed border-[var(--border)] rounded-lg">
-      <div className="flex items-center gap-3">
-        <button onClick={() => inputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--creme-escuro)] transition-colors">
-          <FileText size={14} /> {file ? file.name : "Selecionar arquivo"}
-        </button>
-        {file && <span className="text-xs text-[var(--muted-foreground)]">{(file.size / 1024 / 1024).toFixed(2)} MB</span>}
-        <input ref={inputRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); if (!nome) setNome(f.name.replace(/\.[^.]+$/, "")); } }} />
+      <p className="text-xs text-[var(--muted-foreground)]">
+        Cole o link de compartilhamento do Google Drive. Certifique-se de que o acesso está como <strong>Qualquer um com o link → Leitor</strong>.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Input label="Nome do documento" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Projeto Hidráulico Rev.2" />
+        <Input label="Descrição (opcional)" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Descrição curta" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Input label="Link do Google Drive" value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/file/d/..." />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Categoria</label>
+          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+            className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm outline-none focus:border-[var(--verde-escuro)] bg-white">
+            {categorias.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+          </select>
+        </div>
       </div>
       {erro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">{erro}</p>}
-      {file && (
-        <div className="grid grid-cols-3 gap-2">
-          <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
-          <Input label="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Categoria</label>
-            <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
-              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm outline-none focus:border-[var(--verde-escuro)] bg-white">
-              {categorias.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-      {uploading && (
-        <div className="w-full bg-[var(--creme-escuro)] rounded-full h-1.5">
-          <div className="bg-[var(--verde-escuro)] h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
-        </div>
-      )}
-      {file && (
-        <Btn onClick={upload} disabled={uploading || !nome}>
-          {uploading ? `Enviando ${progress}%...` : done ? <><Check size={13} /> Salvo!</> : <><Upload size={13} /> Enviar arquivo</>}
-        </Btn>
-      )}
+      <Btn onClick={salvar} disabled={saving || !nome || !driveUrl}>
+        {saving ? "Salvando..." : done ? <><Check size={13} /> Salvo!</> : <><Plus size={13} /> Adicionar documento</>}
+      </Btn>
     </div>
   );
 }
@@ -973,8 +953,8 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     return (
       <div className="space-y-4">
         <Card>
-          <SectionTitle>Enviar documento</SectionTitle>
-          <ArquivoUpload clienteId={clienteId} subcategoriasExecutivo={data.profile.subcategorias_executivo ?? []} />
+          <SectionTitle>Adicionar documento</SectionTitle>
+          <DriveArquivoForm clienteId={clienteId} subcategoriasExecutivo={data.profile.subcategorias_executivo ?? []} />
         </Card>
 
         {docs.length > 0 && (
@@ -1003,8 +983,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                     <a href={a.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Abrir</a>
                     <Btn variant="ghost" onClick={() => startEdit(a)}><Edit2 size={12} /></Btn>
                     <Btn variant="danger" disabled={isPending} onClick={() => {
-                      const chave = a.url.split("/").slice(-3).join("/");
-                      run(() => deleteArquivo(a.id, chave, clienteId));
+                      run(() => deleteArquivo(a.id, "", clienteId));
                     }}><Trash2 size={12} /></Btn>
                   </div>
                 </div>
@@ -1585,7 +1564,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
         <Card>
           <SectionTitle>Subcategorias do Executivo</SectionTitle>
           <p className="text-xs text-[var(--muted-foreground)] mb-4">
-            Crie subcategorias como "Obra", "Marcenaria", "Cozinha". Elas aparecem no menu lateral do cliente e permitem o upload de arquivos específicos.
+            Crie subcategorias como "Obra", "Marcenaria", "Cozinha". Elas aparecem no menu lateral do cliente. Depois vincule documentos do Google Drive a cada subcategoria na aba <strong>Documentos</strong>.
           </p>
           <div className="flex gap-2 mb-4">
             <Input
