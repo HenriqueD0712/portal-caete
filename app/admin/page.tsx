@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAllClients, getTotalStorage, getStoragePerClient } from "./queries";
 import { NovoClienteModal } from "@/components/admin/novo-cliente-modal";
 import { DeleteClientBtn } from "@/components/admin/delete-client-btn";
+import { CleanupR2Btn } from "@/components/admin/cleanup-r2-btn";
 import { Users, FolderOpen, Calendar, HardDrive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -35,13 +36,14 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-[var(--border)] rounded-lg p-5 flex items-center gap-4">
+        <div className="bg-white border border-[var(--border)] rounded-lg p-5 flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
             <HardDrive size={18} className="text-[var(--verde-escuro)]" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-2xl font-bold text-[var(--verde-escuro)]">{formatBytes(totalBytes)}</p>
-            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Armazenamento usado no R2</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5 mb-3">Armazenamento usado no R2</p>
+            <CleanupR2Btn />
           </div>
         </div>
       </div>

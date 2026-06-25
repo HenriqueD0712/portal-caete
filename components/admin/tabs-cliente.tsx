@@ -353,7 +353,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
       try {
         if (destaqueAtual) {
           const chave = destaqueAtual.url.split("/").slice(-3).join("/");
-          await deleteArquivo(destaqueAtual.id, chave, clienteId);
+          await deleteArquivo(destaqueAtual.id, clienteId);
         }
         const chave = `arquivos/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
         const res = await fetch("/api/admin/upload-url", {
@@ -400,7 +400,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               <div className="absolute top-2 right-2">
                 <Btn variant="danger" disabled={isPending} onClick={() => {
                   const chave = destaqueAtual.url.split("/").slice(-3).join("/");
-                  run(() => deleteArquivo(destaqueAtual.id, chave, clienteId));
+                  run(() => deleteArquivo(destaqueAtual.id, clienteId));
                 }}>
                   <Trash2 size={12} /> Remover
                 </Btn>
@@ -555,7 +555,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                     variant="danger"
                     disabled={isPending}
                     className="text-xs py-1 px-2"
-                    onClick={() => { const chave = p.url.split("/").slice(-3).join("/"); run(() => deleteArquivo(p.id, chave, clienteId)); }}
+                    onClick={() => run(() => deleteArquivo(p.id, clienteId))}
                   >
                     <Trash2 size={11} />
                   </Btn>
@@ -831,7 +831,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                   </div>
                   <div className="flex gap-2">
                     <Btn variant="ghost" onClick={() => startEdit(v)}><Edit2 size={12} /></Btn>
-                    <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(v.id, "", clienteId))}><Trash2 size={12} /></Btn>
+                    <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(v.id, clienteId))}><Trash2 size={12} /></Btn>
                   </div>
                 </div>
               ))}
@@ -886,7 +886,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           <div><p className="text-sm font-medium">{item.nome}</p><p className="text-xs text-[var(--muted-foreground)] truncate max-w-xs">{item.url}</p></div>
           <div className="flex gap-2">
             <Btn variant="ghost" onClick={() => startEdit(item)}><Edit2 size={12} /></Btn>
-            <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(item.id, "", clienteId))}><Trash2 size={12} /></Btn>
+            <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(item.id, clienteId))}><Trash2 size={12} /></Btn>
           </div>
         </div>
       );
@@ -983,7 +983,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                     <a href={a.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--verde-escuro)] hover:underline">Abrir</a>
                     <Btn variant="ghost" onClick={() => startEdit(a)}><Edit2 size={12} /></Btn>
                     <Btn variant="danger" disabled={isPending} onClick={() => {
-                      run(() => deleteArquivo(a.id, "", clienteId));
+                      run(() => deleteArquivo(a.id, clienteId));
                     }}><Trash2 size={12} /></Btn>
                   </div>
                 </div>
@@ -1472,7 +1472,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
     async function uploadDoc(file: File) {
       setDocUploading(true); setDocErro(""); setDocProgress(0);
       try {
-        if (docAtual) await deleteArquivo(docAtual.id, docAtual.url, clienteId);
+        if (docAtual) await deleteArquivo(docAtual.id, clienteId);
         const chave = `cuidados/${clienteId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
         const res = await fetch("/api/admin/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chave, tipoArquivo: file.type }) });
         if (!res.ok) throw new Error("Falha ao obter URL de upload.");
@@ -1508,7 +1508,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               )}
               <div className="flex gap-2">
                 <Btn variant="ghost" onClick={() => docRef.current?.click()} disabled={docUploading}>Substituir</Btn>
-                <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(docAtual.id, docAtual.url, clienteId))}><Trash2 size={12} /></Btn>
+                <Btn variant="danger" disabled={isPending} onClick={() => run(() => deleteArquivo(docAtual.id, clienteId))}><Trash2 size={12} /></Btn>
               </div>
             </div>
           ) : (

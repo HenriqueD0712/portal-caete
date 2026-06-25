@@ -114,12 +114,20 @@ export async function reorderPanoramas(updates: { id: string; ordem: number }[],
   revalidatePath("/dashboard/midias/panoramas");
 }
 
-export async function deleteArquivo(id: string, chave: string, clienteId: string) {
+export async function deleteArquivo(id: string, clienteId: string) {
   await checkAdmin();
-  try { await deleteFile(chave); } catch {}
   const admin = createAdminClient();
+  // Busca a URL no banco para extrair a chave R2 no servidor (não confia no cliente)
+  const { data: record } = await admin.from("arquivos").select("url").eq("id", id).maybeSingle();
+  if (record?.url) {
+    const r2Base = process.env.R2_PUBLIC_URL ?? "";
+    if (r2Base && record.url.startsWith(r2Base)) {
+      try { await deleteFile(new URL(record.url).pathname.slice(1)); } catch {}
+    }
+  }
   await admin.from("arquivos").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
+  revalidatePath("/dashboard/midias/panoramas");
 }
 
 // ── CRONOGRAMA ─────────────────────────────────────────────
@@ -230,6 +238,14 @@ export async function updateReuniao(id: string, data: Partial<{ data_reuniao: st
 export async function deleteReuniao(id: string, clienteId: string) {
   await checkAdmin();
   const admin = createAdminClient();
+  // Apaga o arquivo de ata do R2 antes de remover o registro
+  const { data: record } = await admin.from("reunioes").select("ata_url").eq("id", id).maybeSingle();
+  if (record?.ata_url) {
+    const r2Base = process.env.R2_PUBLIC_URL ?? "";
+    if (r2Base && record.ata_url.startsWith(r2Base)) {
+      try { await deleteFile(new URL(record.ata_url).pathname.slice(1)); } catch {}
+    }
+  }
   await admin.from("reunioes").delete().eq("id", id);
   revalidatePath(`/admin/clientes/${clienteId}`);
 }
