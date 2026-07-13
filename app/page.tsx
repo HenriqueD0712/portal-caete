@@ -4,10 +4,12 @@ import Image from "next/image";
 import { siteText } from "@/src/config/site-text";
 import { login } from "@/app/actions/auth";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,14 +65,24 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="password" className="text-base font-medium">Senha</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="••••••••"
-                className="h-11 w-full rounded-md border border-[var(--input)] bg-white px-3 text-base outline-none focus:ring-2 focus:ring-[var(--verde-escuro)] transition"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="••••••••"
+                  className="h-11 w-full rounded-md border border-[var(--input)] bg-white pl-3 pr-11 text-base outline-none focus:ring-2 focus:ring-[var(--verde-escuro)] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--muted-foreground)] hover:text-[var(--verde-escuro)] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             {error && (
