@@ -17,8 +17,10 @@ export interface OrcamentoItem {
 export function toCsvUrl(sheetUrl: string): string {
   const m = sheetUrl.match(/\/spreadsheets\/d\/([^/]+)/);
   if (!m) return sheetUrl;
-  const gid = sheetUrl.match(/[#&?]gid=(\d+)/)?.[1] ?? "0";
-  return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gid}`;
+  // Só fixa a aba (gid) se ela vier no link; senão, o Google devolve a 1ª aba.
+  const gid = sheetUrl.match(/[#&?]gid=(\d+)/)?.[1];
+  const base = `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv`;
+  return gid ? `${base}&gid=${gid}` : base;
 }
 
 // Parser CSV (RFC 4180): lida com aspas, vírgulas e quebras de linha dentro de célula.
