@@ -32,11 +32,30 @@ export default async function PlanilhasPage() {
   const planilhas = arquivosRes.data?.filter(a => a.categoria === "planilha") ?? [];
   const cadernos  = arquivosRes.data?.filter(a => a.categoria === "caderno")  ?? [];
 
-  // Planilha financeira do Google Sheets -> lida e exibida em cards (mobile)
-  const orcamentoUrl = profileRes.data?.google_sheets_url ?? "";
-  const orcamentoItens = orcamentoUrl ? await fetchOrcamento(orcamentoUrl) : [];
+  const isSheet = (u: string) => u.includes("docs.google.com/spreadsheets");
+  const docId = (u: string) => u.match(/\/spreadsheets\/d\/([^/]+)/)?.[1] ?? u;
 
-  const semConteudo = orcamentoItens.length === 0 && planilhas.length === 0 && cadernos.length === 0;
+  // Fontes possíveis da planilha financeira: campo do perfil + arquivos "planilha"
+  const fontes = [
+    ...(profileRes.data?.google_sheets_url
+      ? [{ id: "profile", nome: profileRes.data?.nome_projeto ?? "Itens orçados", url: profileRes.data.google_sheets_url }]
+      : []),
+    ...planilhas.filter(p => isSheet(p.url)).map(p => ({ id: p.id, nome: p.nome, url: p.url })),
+  ];
+  // Remove planilhas duplicadas (mesmo documento em fontes diferentes)
+  const vistos = new Set<string>();
+  const fontesUnicas = fontes.filter(f => (vistos.has(docId(f.url)) ? false : (vistos.add(docId(f.url)), true)));
+
+  // Lê cada planilha; mantém só as que têm itens no formato de orçamento
+  const orcamentos = (
+    await Promise.all(fontesUnicas.map(async f => ({ ...f, itens: await fetchOrcamento(f.url) })))
+  ).filter(o => o.itens.length > 0);
+
+  // Planilhas que não viraram cards (outro formato) continuam como iframe
+  const idsCards = new Set(orcamentos.map(o => o.id));
+  const planilhasIframe = planilhas.filter(p => !idsCards.has(p.id));
+
+  const semConteudo = orcamentos.length === 0 && planilhasIframe.length === 0 && cadernos.length === 0;
 
   return (
     <div className="space-y-8">
@@ -55,24 +74,24 @@ export default async function PlanilhasPage() {
       ) : (
         <>
           {/* Itens orçados (planilha financeira em cards) */}
-          {orcamentoItens.length > 0 && (
-            <section className="space-y-4">
+          {orcamentos.map((o) => (
+            <section key={o.id} className="space-y-4">
               <div className="flex items-center gap-2">
                 <Package size={16} className="text-[var(--verde-escuro)]" />
                 <h2 className="text-sm font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">Itens orçados</h2>
               </div>
-              <OrcamentoView items={orcamentoItens} />
+              <OrcamentoView items={o.itens} />
             </section>
-          )}
+          ))}
 
-          {/* Planilhas */}
-          {planilhas.length > 0 && (
+          {/* Planilhas (outros formatos) */}
+          {planilhasIframe.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <TableProperties size={16} className="text-[var(--verde-escuro)]" />
                 <h2 className="text-sm font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">Planilhas</h2>
               </div>
-              {planilhas.map((p) => (
+              {planilhasIframe.map((p) => (
                 <div key={p.id} className="space-y-2">
                   <p className="text-sm font-medium text-[var(--foreground)]">{p.nome}</p>
                   <SheetsEmbed src={toSheetsEmbed(p.url)} title={p.nome} />
