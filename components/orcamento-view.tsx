@@ -123,9 +123,9 @@ export function OrcamentoView({ items }: { items: OrcamentoItem[] }) {
             {itens.map((i, idx) => (
               <Card key={`${cat}-${idx}`} i={i} />
             ))}
-            <div className="flex items-baseline justify-between pt-2 border-t border-[var(--border)]">
-              <span className="text-xs text-[var(--muted-foreground)]">Subtotal</span>
-              <span className="text-sm font-semibold text-[var(--verde-escuro)]">{brl.format(subtotal)}</span>
+            <div className="flex items-center justify-between rounded-lg bg-[var(--creme-escuro)] px-3 py-2">
+              <span className="text-xs font-medium text-[var(--verde-medio)] uppercase tracking-wide">Subtotal</span>
+              <span className="text-base font-semibold text-[var(--verde-escuro)]">{brl.format(subtotal)}</span>
             </div>
           </section>
         );
