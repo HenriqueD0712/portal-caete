@@ -15,10 +15,20 @@ export interface OrcamentoItem {
 
 // Converte qualquer URL do Google Sheets no link de exportação CSV.
 export function toCsvUrl(sheetUrl: string): string {
-  const m = sheetUrl.match(/\/spreadsheets\/d\/([^/]+)/);
-  if (!m) return sheetUrl;
   // Só fixa a aba (gid) se ela vier no link; senão, o Google devolve a 1ª aba.
   const gid = sheetUrl.match(/[#&?]gid=(\d+)/)?.[1];
+
+  // Formato "Publicar na web": /spreadsheets/d/e/<token>/pubhtml
+  const pub = sheetUrl.match(/\/spreadsheets\/d\/e\/([^/]+)/);
+  if (pub) {
+    let u = `https://docs.google.com/spreadsheets/d/e/${pub[1]}/pub?output=csv&single=true`;
+    if (gid) u += `&gid=${gid}`;
+    return u;
+  }
+
+  // Formato normal (editor): /spreadsheets/d/<id>/edit
+  const m = sheetUrl.match(/\/spreadsheets\/d\/([^/]+)/);
+  if (!m) return sheetUrl;
   const base = `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv`;
   return gid ? `${base}&gid=${gid}` : base;
 }
@@ -76,6 +86,7 @@ export async function fetchOrcamento(sheetUrl: string): Promise<OrcamentoItem[]>
   for (const r of rows.slice(h + 1)) {
     const col0 = norm(r[0]);
     if (!col0) continue;
+    if (col0.toLowerCase() === "item") continue; // cabeçalho repetido
     if (col0.toUpperCase().includes("VALOR TOTAL")) continue; // linhas de subtotal/total
 
     const temPreco = !!norm(r[1]);

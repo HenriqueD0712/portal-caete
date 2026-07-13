@@ -33,7 +33,7 @@ export default async function PlanilhasPage() {
   const cadernos  = arquivosRes.data?.filter(a => a.categoria === "caderno")  ?? [];
 
   const isSheet = (u: string) => u.includes("docs.google.com/spreadsheets");
-  const docId = (u: string) => u.match(/\/spreadsheets\/d\/([^/]+)/)?.[1] ?? u;
+  const docId = (u: string) => u.match(/\/spreadsheets\/d\/(?:e\/)?([^/]+)/)?.[1] ?? u;
 
   // Fontes possíveis da planilha financeira: campo do perfil + arquivos "planilha"
   const fontes = [
