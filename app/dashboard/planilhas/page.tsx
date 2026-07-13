@@ -1,7 +1,9 @@
 import { createClient } from "@/src/lib/supabase/server";
 import { SheetsEmbed } from "@/components/sheets-embed";
 import { CanvaEmbed } from "@/components/canva-embed";
-import { TableProperties, BookOpen } from "lucide-react";
+import { OrcamentoView } from "@/components/orcamento-view";
+import { fetchOrcamento } from "@/src/lib/orcamento";
+import { TableProperties, BookOpen, Package } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +32,11 @@ export default async function PlanilhasPage() {
   const planilhas = arquivosRes.data?.filter(a => a.categoria === "planilha") ?? [];
   const cadernos  = arquivosRes.data?.filter(a => a.categoria === "caderno")  ?? [];
 
-  // Compatibilidade retroativa: inclui a planilha antiga do profile se não há novas
-  const legacyUrl = profileRes.data?.google_sheets_url;
-  if (planilhas.length === 0 && legacyUrl) {
-    planilhas.push({ id: "legacy", nome: profileRes.data?.nome_projeto ?? "Planilha do projeto", url: legacyUrl, categoria: "planilha" });
-  }
+  // Planilha financeira do Google Sheets -> lida e exibida em cards (mobile)
+  const orcamentoUrl = profileRes.data?.google_sheets_url ?? "";
+  const orcamentoItens = orcamentoUrl ? await fetchOrcamento(orcamentoUrl) : [];
 
-  const semConteudo = planilhas.length === 0 && cadernos.length === 0;
+  const semConteudo = orcamentoItens.length === 0 && planilhas.length === 0 && cadernos.length === 0;
 
   return (
     <div className="space-y-8">
@@ -54,6 +54,17 @@ export default async function PlanilhasPage() {
         </div>
       ) : (
         <>
+          {/* Itens orçados (planilha financeira em cards) */}
+          {orcamentoItens.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Package size={16} className="text-[var(--verde-escuro)]" />
+                <h2 className="text-sm font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">Itens orçados</h2>
+              </div>
+              <OrcamentoView items={orcamentoItens} />
+            </section>
+          )}
+
           {/* Planilhas */}
           {planilhas.length > 0 && (
             <section className="space-y-4">
