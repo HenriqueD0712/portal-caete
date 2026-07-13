@@ -112,32 +112,46 @@ export function OrcamentoView({ items }: { items: OrcamentoItem[] }) {
         </div>
       </div>
 
-      {/* Total */}
-      <div className="bg-[var(--verde-escuro)] rounded-xl px-4 py-3 flex items-center justify-between">
-        <span className="text-xs text-white/70">
-          {amb === "Todos" ? "Total geral" : `Total · ${amb}`}
-          <span className="ml-1">({filtrados.length} itens)</span>
-        </span>
-        <span className="text-lg font-semibold text-white">{brl.format(total)}</span>
-      </div>
-
-      {/* Grupos por categoria */}
+      {/* Grupos por categoria (subtotal ao final de cada uma) */}
       {grupos.map(([cat, itens]) => {
         const subtotal = itens.reduce((s, i) => s + i.valorTotal, 0);
         return (
           <section key={cat} className="space-y-2.5">
-            <div className="flex items-baseline justify-between">
-              <h3 className="text-xs font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">
-                {cat}
-              </h3>
-              <span className="text-xs text-[var(--muted-foreground)]">{brl.format(subtotal)}</span>
-            </div>
+            <h3 className="text-xs font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">
+              {cat}
+            </h3>
             {itens.map((i, idx) => (
               <Card key={`${cat}-${idx}`} i={i} />
             ))}
+            <div className="flex items-baseline justify-between pt-2 border-t border-[var(--border)]">
+              <span className="text-xs text-[var(--muted-foreground)]">Subtotal</span>
+              <span className="text-sm font-semibold text-[var(--verde-escuro)]">{brl.format(subtotal)}</span>
+            </div>
           </section>
         );
       })}
+
+      {/* Resumo final: total por categoria + total do projeto */}
+      <section className="space-y-2 pt-2">
+        <h3 className="text-xs font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">Resumo</h3>
+        <div className="bg-white rounded-xl border border-[var(--border)] divide-y divide-[var(--border)] overflow-hidden">
+          {grupos.map(([cat, itens]) => (
+            <div key={cat} className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-sm text-[var(--foreground)]">{cat}</span>
+              <span className="text-sm text-[var(--muted-foreground)]">
+                {brl.format(itens.reduce((s, i) => s + i.valorTotal, 0))}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="bg-[var(--verde-escuro)] rounded-xl px-4 py-3 flex items-center justify-between">
+          <span className="text-sm text-white/80">
+            {amb === "Todos" ? "Total do projeto" : `Total · ${amb}`}
+            <span className="ml-1 text-white/60">({filtrados.length} itens)</span>
+          </span>
+          <span className="text-lg font-semibold text-white">{brl.format(total)}</span>
+        </div>
+      </section>
     </div>
   );
 }
