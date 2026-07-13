@@ -51,9 +51,10 @@ export default async function PlanilhasPage() {
     await Promise.all(fontesUnicas.map(async f => ({ ...f, itens: await fetchOrcamento(f.url) })))
   ).filter(o => o.itens.length > 0);
 
-  // Planilhas que não viraram cards (outro formato) continuam como iframe
-  const idsCards = new Set(orcamentos.map(o => o.id));
-  const planilhasIframe = planilhas.filter(p => !idsCards.has(p.id));
+  // Planilhas que não viraram cards (outro formato) continuam como iframe.
+  // Remove pelo documento: se o mesmo link já vira cards, não repete o "clique para abrir".
+  const docsCards = new Set(orcamentos.map(o => docId(o.url)));
+  const planilhasIframe = planilhas.filter(p => !docsCards.has(docId(p.url)));
 
   const semConteudo = orcamentos.length === 0 && planilhasIframe.length === 0 && cadernos.length === 0;
 
