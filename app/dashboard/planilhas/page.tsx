@@ -17,34 +17,23 @@ export default async function PlanilhasPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [arquivosRes, profileRes] = await Promise.all([
-    supabase.from("arquivos")
-      .select("id, nome, url, categoria")
-      .eq("cliente_id", user!.id)
-      .in("categoria", ["planilha", "caderno"])
-      .order("created_at", { ascending: true }),
-    supabase.from("profiles")
-      .select("google_sheets_url, nome_projeto")
-      .eq("id", user!.id)
-      .single(),
-  ]);
+  const { data: arquivos } = await supabase.from("arquivos")
+    .select("id, nome, url, categoria")
+    .eq("cliente_id", user!.id)
+    .in("categoria", ["planilha", "caderno"])
+    .order("created_at", { ascending: true });
 
-  const planilhas = arquivosRes.data?.filter(a => a.categoria === "planilha") ?? [];
-  const cadernos  = arquivosRes.data?.filter(a => a.categoria === "caderno")  ?? [];
+  const planilhas = arquivos?.filter(a => a.categoria === "planilha") ?? [];
+  const cadernos  = arquivos?.filter(a => a.categoria === "caderno")  ?? [];
 
   const isSheet = (u: string) => u.includes("docs.google.com/spreadsheets");
   const docId = (u: string) => u.match(/\/spreadsheets\/d\/(?:e\/)?([^/]+)/)?.[1] ?? u;
 
-  // Fontes possíveis da planilha financeira: campo do perfil + arquivos "planilha"
-  const fontes = [
-    ...(profileRes.data?.google_sheets_url
-      ? [{ id: "profile", nome: profileRes.data?.nome_projeto ?? "Itens orçados", url: profileRes.data.google_sheets_url }]
-      : []),
-    ...planilhas.filter(p => isSheet(p.url)).map(p => ({ id: p.id, nome: p.nome, url: p.url })),
-  ];
-  // Remove planilhas duplicadas (mesmo documento em fontes diferentes)
+  // Fonte única da planilha financeira: os arquivos cadastrados como "planilha"
   const vistos = new Set<string>();
-  const fontesUnicas = fontes.filter(f => (vistos.has(docId(f.url)) ? false : (vistos.add(docId(f.url)), true)));
+  const fontesUnicas = planilhas
+    .filter(p => isSheet(p.url))
+    .filter(f => (vistos.has(docId(f.url)) ? false : (vistos.add(docId(f.url)), true)));
 
   // Lê cada planilha; mantém só as que têm itens no formato de orçamento
   const orcamentos = (

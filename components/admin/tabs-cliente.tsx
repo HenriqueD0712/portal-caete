@@ -330,7 +330,6 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
   function TabPerfil() {
     const [nome, setNome] = useState(data.profile.nome ?? "");
     const [nomeProjeto, setNomeProjeto] = useState(data.profile.nome_projeto ?? "");
-    const [sheetsUrl, setSheetsUrl] = useState(data.profile.google_sheets_url ?? "");
     const [saved, setSaved] = useState(false);
     const [destaqueUploading, setDestaqueUploading] = useState(false);
     const [destaqueProgress, setDestaqueProgress] = useState(0);
@@ -341,7 +340,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
     function save() {
       run(async () => {
-        await updateProfile(clienteId, { nome, nome_projeto: nomeProjeto, google_sheets_url: sheetsUrl });
+        await updateProfile(clienteId, { nome, nome_projeto: nomeProjeto });
         setSaved(true); setTimeout(() => setSaved(false), 2000);
       });
     }
@@ -382,7 +381,6 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
           <div className="space-y-3">
             <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
             <Input label="Nome do projeto" value={nomeProjeto} onChange={(e) => setNomeProjeto(e.target.value)} />
-            <Input label="URL do Google Sheets" value={sheetsUrl} onChange={(e) => setSheetsUrl(e.target.value)} placeholder="https://docs.google.com/..." />
           </div>
           <div className="mt-4">
             <Btn onClick={save} disabled={isPending}>
