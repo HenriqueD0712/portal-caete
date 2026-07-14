@@ -1,9 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { REMEMBER_COOKIE, withRemember } from "./cookies";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const remember = cookieStore.get(REMEMBER_COOKIE)?.value !== "0";
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +18,7 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, withRemember(options ?? {}, remember))
             );
           } catch {}
         },

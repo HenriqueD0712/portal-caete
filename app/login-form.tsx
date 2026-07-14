@@ -44,6 +44,16 @@ export function LoginForm() {
         </div>
       </div>
 
+      <label className="flex items-center gap-2 text-base text-[var(--muted-foreground)] select-none cursor-pointer">
+        <input
+          type="checkbox"
+          name="remember"
+          defaultChecked
+          className="h-4 w-4 accent-[var(--verde-escuro)]"
+        />
+        Manter conectado neste dispositivo
+      </label>
+
       {state?.error && (
         <p className="text-base text-red-600 bg-red-50 px-3 py-2 rounded-md">{state.error}</p>
       )}
