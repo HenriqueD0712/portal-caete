@@ -1,4 +1,5 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import Link from "next/link";
 import { Building2, FileText } from "lucide-react";
 
@@ -6,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ExecutivoPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: profileData } = await supabase
     .from("profiles")

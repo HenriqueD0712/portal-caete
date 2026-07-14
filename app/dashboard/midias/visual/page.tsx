@@ -1,9 +1,10 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import { CanvaEmbed } from "@/components/canva-embed";
 
 export default async function MidiasVisualPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: arquivos } = await supabase
     .from("arquivos")

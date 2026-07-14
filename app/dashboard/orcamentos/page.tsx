@@ -1,9 +1,10 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import { FileList } from "@/components/file-list";
 
 export default async function OrcamentosPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: arquivos } = await supabase
     .from("arquivos")

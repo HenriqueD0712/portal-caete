@@ -1,9 +1,10 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import { AprovacaoCard } from "@/components/aprovacao-card";
 
 export default async function ProgressoPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: progresso } = await supabase
     .from("progresso")

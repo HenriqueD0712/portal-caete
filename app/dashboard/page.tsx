@@ -1,4 +1,5 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import Link from "next/link";
 import {
   FileText, Calendar, Eye, Building2,
@@ -24,7 +25,7 @@ function formatDate(d: string | null | undefined) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const [profileRes, aprovRes, cronogramaRes, destaqueRes, agendaRes] = await Promise.all([
     supabase.from("profiles")

@@ -1,9 +1,10 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import { CalendarDays, CheckCircle2, Circle } from "lucide-react";
 
 export default async function CronogramaPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: itens } = await supabase
     .from("cronograma")

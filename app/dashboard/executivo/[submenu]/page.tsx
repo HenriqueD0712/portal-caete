@@ -1,4 +1,5 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { getCachedUser } from "@/src/lib/supabase/user";
 import { notFound } from "next/navigation";
 import { FileList } from "@/components/file-list";
 
@@ -12,7 +13,7 @@ export default async function ExecutivoSubmenuPage({ params }: Props) {
   const { submenu } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   const { data: profileData } = await supabase
     .from("profiles")
