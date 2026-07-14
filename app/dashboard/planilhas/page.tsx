@@ -1,5 +1,5 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { SheetsEmbed } from "@/components/sheets-embed";
 import { CanvaEmbed } from "@/components/canva-embed";
 import { OrcamentoSection } from "@/components/orcamento-section";
@@ -15,14 +15,16 @@ function toSheetsEmbed(url: string): string {
 }
 
 export default async function PlanilhasPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: arquivos } = await supabase.from("arquivos")
-    .select("id, nome, url, categoria")
-    .eq("cliente_id", user!.id)
-    .in("categoria", ["planilha", "caderno"])
-    .order("created_at", { ascending: true });
+  const arquivos = await getUserData(user!.id, token, "planilhas-arquivos", async (sb) =>
+    (await sb.from("arquivos")
+      .select("id, nome, url, categoria")
+      .eq("cliente_id", user!.id)
+      .in("categoria", ["planilha", "caderno"])
+      .order("created_at", { ascending: true })).data ?? []
+  );
 
   const planilhas = arquivos?.filter(a => a.categoria === "planilha") ?? [];
   const cadernos  = arquivos?.filter(a => a.categoria === "caderno")  ?? [];

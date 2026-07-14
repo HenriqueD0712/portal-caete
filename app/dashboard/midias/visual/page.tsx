@@ -1,17 +1,19 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { CanvaEmbed } from "@/components/canva-embed";
 
 export default async function MidiasVisualPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: arquivos } = await supabase
-    .from("arquivos")
-    .select("id, nome, descricao, url")
-    .eq("cliente_id", user!.id)
-    .eq("categoria", "visual_3d")
-    .order("created_at", { ascending: false });
+  const arquivos = await getUserData(user!.id, token, "arquivos-visual_3d", async (sb) =>
+    (await sb
+      .from("arquivos")
+      .select("id, nome, descricao, url")
+      .eq("cliente_id", user!.id)
+      .eq("categoria", "visual_3d")
+      .order("created_at", { ascending: false })).data ?? []
+  );
 
   return (
     <div className="space-y-6">

@@ -1,21 +1,18 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { AprovacaoCard } from "@/components/aprovacao-card";
 
 export default async function ProgressoPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: progresso } = await supabase
-    .from("progresso")
-    .select("*")
-    .eq("cliente_id", user!.id)
-    .order("ordem");
-
-  const { data: aprovacoes } = await supabase
-    .from("aprovacoes")
-    .select("*")
-    .eq("cliente_id", user!.id);
+  const { progresso, aprovacoes } = await getUserData(user!.id, token, "progresso", async (sb) => {
+    const [progressoRes, aprovacoesRes] = await Promise.all([
+      sb.from("progresso").select("*").eq("cliente_id", user!.id).order("ordem"),
+      sb.from("aprovacoes").select("*").eq("cliente_id", user!.id),
+    ]);
+    return { progresso: progressoRes.data ?? [], aprovacoes: aprovacoesRes.data ?? [] };
+  });
 
   const criativo = progresso?.filter((p) => p.etapa === "criativo") ?? [];
   const executivo = progresso?.filter((p) => p.etapa === "executivo") ?? [];

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/src/lib/supabase/server";
+import { bustUserCache } from "@/src/lib/cache";
 import { revalidatePath } from "next/cache";
 import { ADMIN_EMAIL } from "@/app/admin/config";
 
@@ -72,5 +73,6 @@ export async function clienteResponderAprovacao(
     profile?.nome ?? user.email ?? "—",
   );
 
+  bustUserCache(user.id);
   revalidatePath("/dashboard");
 }

@@ -1,5 +1,5 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import Link from "next/link";
 import {
   FileText, Calendar, Eye, Building2,
@@ -24,24 +24,29 @@ function formatDate(d: string | null | undefined) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const [profileRes, aprovRes, cronogramaRes, destaqueRes, agendaRes] = await Promise.all([
-    supabase.from("profiles")
-      .select("nome, nome_projeto, progresso_criativo, progresso_executivo, data_entrega_criativo, data_entrega_executivo")
-      .eq("id", user!.id).single(),
-    supabase.from("aprovacoes").select("id, etapa, status, comentario, updated_at, bloqueado").eq("cliente_id", user!.id).order("created_at"),
-    supabase.from("cronograma").select("titulo, data_prevista, concluido").eq("cliente_id", user!.id).eq("concluido", false).order("data_prevista").limit(3),
-    supabase.from("arquivos").select("url, nome").eq("cliente_id", user!.id).eq("categoria", "destaque").order("created_at", { ascending: false }).limit(1),
-    supabase.from("reunioes_agendadas").select("id, data_reuniao, horario, modalidade, assunto, link_reuniao, local_reuniao").eq("cliente_id", user!.id).gte("data_reuniao", new Date().toISOString().slice(0, 10)).order("data_reuniao").order("horario").limit(5),
-  ]);
-
-  const profile = profileRes.data;
-  const aprovacoes = aprovRes.data ?? [];
-  const cronograma = cronogramaRes.data ?? [];
-  const destaque = destaqueRes.data?.[0] ?? null;
-  const agenda = agendaRes.data ?? [];
+  const { profile, aprovacoes, cronograma, destaque, agenda } = await getUserData(
+    user!.id, token, "dashboard-home", async (sb) => {
+      const [profileRes, aprovRes, cronogramaRes, destaqueRes, agendaRes] = await Promise.all([
+        sb.from("profiles")
+          .select("nome, nome_projeto, progresso_criativo, progresso_executivo, data_entrega_criativo, data_entrega_executivo")
+          .eq("id", user!.id).single(),
+        sb.from("aprovacoes").select("id, etapa, status, comentario, updated_at, bloqueado").eq("cliente_id", user!.id).order("created_at"),
+        sb.from("cronograma").select("titulo, data_prevista, concluido").eq("cliente_id", user!.id).eq("concluido", false).order("data_prevista").limit(3),
+        sb.from("arquivos").select("url, nome").eq("cliente_id", user!.id).eq("categoria", "destaque").order("created_at", { ascending: false }).limit(1),
+        sb.from("reunioes_agendadas").select("id, data_reuniao, horario, modalidade, assunto, link_reuniao, local_reuniao").eq("cliente_id", user!.id).gte("data_reuniao", new Date().toISOString().slice(0, 10)).order("data_reuniao").order("horario").limit(5),
+      ]);
+      return {
+        profile: profileRes.data,
+        aprovacoes: aprovRes.data ?? [],
+        cronograma: cronogramaRes.data ?? [],
+        destaque: destaqueRes.data?.[0] ?? null,
+        agenda: agendaRes.data ?? [],
+      };
+    }
+  );
 
   const pCriativo = profile?.progresso_criativo ?? 0;
   const pExecutivo = profile?.progresso_executivo ?? 0;

@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/sidebar";
 export const dynamic = "force-dynamic";
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -12,13 +12,14 @@ export default async function DashboardLayout({
   const user = await getCachedUser();
   if (!user) redirect("/");
 
-  const supabase = await createClient();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("nome, nome_projeto, subcategorias_executivo")
-    .eq("id", user.id)
-    .single();
+  const token = await getCachedAccessToken();
+  const profile = await getUserData(user.id, token, "layout-profile", async (sb) =>
+    (await sb
+      .from("profiles")
+      .select("nome, nome_projeto, subcategorias_executivo")
+      .eq("id", user.id)
+      .single()).data
+  );
 
   return (
     <div className="flex min-h-screen bg-[var(--creme)]">

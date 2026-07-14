@@ -1,19 +1,21 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import Link from "next/link";
 import { Building2, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExecutivoPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("subcategorias_executivo")
-    .eq("id", user!.id)
-    .single();
+  const profileData = await getUserData(user!.id, token, "executivo-subcats", async (sb) =>
+    (await sb
+      .from("profiles")
+      .select("subcategorias_executivo")
+      .eq("id", user!.id)
+      .single()).data
+  );
 
   const subcategorias: string[] =
     (profileData as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? [];

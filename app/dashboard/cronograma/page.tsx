@@ -1,16 +1,18 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { CalendarDays, CheckCircle2, Circle } from "lucide-react";
 
 export default async function CronogramaPage() {
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: itens } = await supabase
-    .from("cronograma")
-    .select("*")
-    .eq("cliente_id", user!.id)
-    .order("data_prevista");
+  const itens = await getUserData(user!.id, token, "cronograma", async (sb) =>
+    (await sb
+      .from("cronograma")
+      .select("*")
+      .eq("cliente_id", user!.id)
+      .order("data_prevista")).data ?? []
+  );
 
   const hoje = new Date();
 

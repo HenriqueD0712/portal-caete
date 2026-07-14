@@ -1,5 +1,5 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { getCachedUser } from "@/src/lib/supabase/user";
+import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
+import { getUserData } from "@/src/lib/cache";
 import { notFound } from "next/navigation";
 import { FileList } from "@/components/file-list";
 
@@ -12,14 +12,16 @@ interface Props {
 export default async function ExecutivoSubmenuPage({ params }: Props) {
   const { submenu } = await params;
 
-  const supabase = await createClient();
   const user = await getCachedUser();
+  const token = await getCachedAccessToken();
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("subcategorias_executivo")
-    .eq("id", user!.id)
-    .single();
+  const profileData = await getUserData(user!.id, token, "executivo-subcats", async (sb) =>
+    (await sb
+      .from("profiles")
+      .select("subcategorias_executivo")
+      .eq("id", user!.id)
+      .single()).data
+  );
 
   const subcategorias: string[] =
     (profileData as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? [];
@@ -28,12 +30,14 @@ export default async function ExecutivoSubmenuPage({ params }: Props) {
 
   const label = submenu.charAt(0).toUpperCase() + submenu.slice(1);
 
-  const { data: arquivos } = await supabase
-    .from("arquivos")
-    .select("*")
-    .eq("cliente_id", user!.id)
-    .eq("categoria", submenu)
-    .order("created_at", { ascending: false });
+  const arquivos = await getUserData(user!.id, token, `arquivos-${submenu}`, async (sb) =>
+    (await sb
+      .from("arquivos")
+      .select("*")
+      .eq("cliente_id", user!.id)
+      .eq("categoria", submenu)
+      .order("created_at", { ascending: false })).data ?? []
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
