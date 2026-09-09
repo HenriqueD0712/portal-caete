@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/src/lib/supabase/server";
+import { usernameToEmail } from "@/src/config/auth";
 import { REMEMBER_COOKIE } from "@/src/lib/supabase/cookies";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,10 +19,10 @@ export async function login(_prevState: unknown, formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: formData.get("email") as string,
+    email: usernameToEmail(formData.get("username") as string),
     password: formData.get("password") as string,
   });
-  if (error) return { error: "E-mail ou senha incorretos." };
+  if (error) return { error: "Usuário ou senha incorretos." };
   redirect("/dashboard");
 }
 

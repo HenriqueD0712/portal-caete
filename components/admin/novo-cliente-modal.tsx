@@ -16,12 +16,12 @@ export function NovoClienteModal() {
     const fd = new FormData(e.currentTarget);
     const nome = fd.get("nome") as string;
     const nomeProjeto = fd.get("nomeProjeto") as string;
-    const email = fd.get("email") as string;
+    const username = fd.get("username") as string;
     const password = fd.get("password") as string;
 
     startTransition(async () => {
       try {
-        await createNewClient(email, password, nome, nomeProjeto);
+        await createNewClient(username, password, nome, nomeProjeto);
         setOpen(false);
         setError("");
         router.refresh();
@@ -63,8 +63,8 @@ export function NovoClienteModal() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">E-mail</label>
-                <input name="email" type="email" required placeholder="cliente@email.com" className="input-admin" />
+                <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Usuário</label>
+                <input name="username" type="text" required autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="ex: familia-silva" className="input-admin" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Senha inicial</label>

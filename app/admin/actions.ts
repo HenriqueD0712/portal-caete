@@ -4,6 +4,7 @@ import { createAdminClient } from "@/src/lib/supabase/server";
 import { createClient } from "@/src/lib/supabase/server";
 import { deleteFile, deleteAllClientFiles } from "@/src/lib/r2";
 import { bustUserCache } from "@/src/lib/cache";
+import { usernameToEmail } from "@/src/config/auth";
 import { revalidatePath } from "next/cache";
 import { ADMIN_EMAIL } from "./config";
 
@@ -14,11 +15,11 @@ async function checkAdmin() {
 }
 
 // ── CLIENTES ───────────────────────────────────────────────
-export async function createNewClient(email: string, password: string, nome: string, nomeProjeto: string) {
+export async function createNewClient(username: string, password: string, nome: string, nomeProjeto: string) {
   await checkAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
-    email, password, email_confirm: true, user_metadata: { nome },
+    email: usernameToEmail(username), password, email_confirm: true, user_metadata: { nome },
   });
   if (error) throw error;
   await admin.from("profiles").update({ nome, nome_projeto: nomeProjeto }).eq("id", data.user.id);

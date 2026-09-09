@@ -11,13 +11,16 @@ export function LoginForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-base font-medium">E-mail</label>
+        <label htmlFor="username" className="text-base font-medium">Usuário</label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="username"
+          name="username"
+          type="text"
           required
-          placeholder="seu@email.com"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="seu-usuario"
           className="h-11 w-full rounded-md border border-[var(--input)] bg-white px-3 text-base outline-none focus:ring-2 focus:ring-[var(--verde-escuro)] transition"
         />
       </div>
