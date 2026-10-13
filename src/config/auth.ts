@@ -7,5 +7,13 @@ export const INTERNAL_EMAIL_DOMAIN = "portal.local";
 
 export function usernameToEmail(input: string): string {
   const v = (input ?? "").trim().toLowerCase();
-  return v.includes("@") ? v : `${v}@${INTERNAL_EMAIL_DOMAIN}`;
+  if (v.includes("@")) return v;
+  // Tira acentos, troca espaços por "-" e remove símbolos que o e-mail não aceita.
+  const slug = v
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9._-]/g, "")
+    .replace(/^[-.]+|[-.]+$/g, "");
+  return `${slug}@${INTERNAL_EMAIL_DOMAIN}`;
 }

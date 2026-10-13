@@ -17,15 +17,22 @@ async function checkAdmin() {
 // ── CLIENTES ───────────────────────────────────────────────
 export async function createNewClient(username: string, password: string, nome: string, nomeProjeto: string) {
   await checkAdmin();
+  const email = usernameToEmail(username);
+  // Em produção o Next.js esconde mensagens de erros "lançados"; por isso devolvemos o erro.
+  if (email.startsWith("@")) return { error: "Usuário inválido. Use letras e números." };
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
-    email: usernameToEmail(username), password, email_confirm: true, user_metadata: { nome },
+    email, password, email_confirm: true, user_metadata: { nome },
   });
-  if (error) throw error;
+  if (error) {
+    if (/already|registered|exists/i.test(error.message)) return { error: "Esse usuário já existe. Escolha outro." };
+    if (/password/i.test(error.message)) return { error: "A senha precisa ter pelo menos 6 caracteres." };
+    return { error: `Não foi possível criar: ${error.message}` };
+  }
   await admin.from("profiles").update({ nome, nome_projeto: nomeProjeto }).eq("id", data.user.id);
   bustUserCache(data.user.id);
   revalidatePath("/admin");
-  return data.user.id;
+  return { id: data.user.id };
 }
 
 export async function updateProfile(id: string, data: {

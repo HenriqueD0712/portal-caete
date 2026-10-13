@@ -21,7 +21,8 @@ export function NovoClienteModal() {
 
     startTransition(async () => {
       try {
-        await createNewClient(username, password, nome, nomeProjeto);
+        const res = await createNewClient(username, password, nome, nomeProjeto);
+        if (res.error) { setError(res.error); return; }
         setOpen(false);
         setError("");
         router.refresh();
