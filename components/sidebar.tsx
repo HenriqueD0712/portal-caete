@@ -10,6 +10,7 @@ import {
   Table2, ChevronDown, ChevronRight, Menu, X, LogOut, Layers, ScrollText,
 } from "lucide-react";
 import { navigationSections } from "@/src/config/navigation";
+import { siteText } from "@/src/config/site-text";
 import { logout } from "@/app/actions/auth";
 import { cn } from "@/src/lib/utils";
 
@@ -28,10 +29,12 @@ export function Sidebar({
   nomeProjeto,
   nome,
   subcategoriasExecutivo = [],
+  abas = [],
 }: {
   nomeProjeto?: string;
   nome?: string;
   subcategoriasExecutivo?: string[];
+  abas?: { label: string; href: string }[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -172,6 +175,34 @@ export function Sidebar({
             </div>
           );
         })}
+
+        {/* Abas de documentos criadas pelo admin */}
+        {abas.length > 0 && (
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/30 px-3 mb-1.5">
+              {siteText.nav.documentos}
+            </p>
+            <ul className="space-y-0.5">
+              {abas.map((aba) => (
+                <li key={aba.href}>
+                  <Link
+                    href={aba.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                      pathname === aba.href
+                        ? "bg-[var(--terracota)] text-white"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <FileText size={15} />
+                    {aba.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* User + logout */}

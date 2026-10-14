@@ -17,6 +17,7 @@ import {
   saveCuidado, updateCuidado, deleteCuidado,
   changeClientPassword, reorderPanoramas,
 } from "@/app/admin/actions";
+import { ABA_PREFIX, abaLabel, abaSlug, categoriaLabel, isAba } from "@/src/config/abas";
 
 // ── Types ──────────────────────────────────────────────────
 type Profile = {
@@ -247,16 +248,20 @@ function PanoramaUpload({ clienteId }: { clienteId: string }) {
 }
 
 // ── Drive Link Form (documentos via Google Drive) ──────────
-function DriveArquivoForm({ clienteId, subcategoriasExecutivo = [] }: { clienteId: string; subcategoriasExecutivo?: string[] }) {
+const NOVA_ABA = "__nova__";
+
+function DriveArquivoForm({ clienteId, subcategoriasExecutivo = [], abasExistentes = [] }: { clienteId: string; subcategoriasExecutivo?: string[]; abasExistentes?: string[] }) {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("orcamento");
+  const [novaAba, setNovaAba] = useState("");
   const [driveUrl, setDriveUrl] = useState("");
   const [done, setDone] = useState(false);
   const [erro, setErro] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const categorias = ["orcamento", "contrato", "outro", ...subcategoriasExecutivo];
+  const categorias = ["orcamento", "contrato", ...subcategoriasExecutivo];
+  const criandoAba = categoria === NOVA_ABA;
 
   async function salvar() {
     if (!nome || !driveUrl) return;
@@ -264,11 +269,20 @@ function DriveArquivoForm({ clienteId, subcategoriasExecutivo = [] }: { clienteI
       setErro("Cole um link do Google Drive válido (deve conter drive.google.com).");
       return;
     }
+    let categoriaFinal = categoria;
+    if (criandoAba) {
+      const nomeAba = novaAba.trim();
+      if (!nomeAba) { setErro("Digite o nome da nova aba (ex: Briefing)."); return; }
+      // Se já existe uma aba com esse nome, reaproveita (evita duplicar "Briefing"/"briefing").
+      const existente = abasExistentes.find((a) => abaSlug(abaLabel(a)) === abaSlug(nomeAba));
+      categoriaFinal = existente ?? ABA_PREFIX + nomeAba;
+    }
     setSaving(true);
     setErro("");
     try {
-      await saveArquivo(clienteId, { nome, descricao, categoria, url: driveUrl, tipo_arquivo: "drive" });
-      setDone(true); setNome(""); setDescricao(""); setDriveUrl("");
+      await saveArquivo(clienteId, { nome, descricao, categoria: categoriaFinal, url: driveUrl, tipo_arquivo: "drive" });
+      setDone(true); setNome(""); setDescricao(""); setDriveUrl(""); setNovaAba("");
+      setCategoria(categoriaFinal);
       setTimeout(() => setDone(false), 3000);
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar.");
@@ -293,9 +307,14 @@ function DriveArquivoForm({ clienteId, subcategoriasExecutivo = [] }: { clienteI
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
             className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm outline-none focus:border-[var(--verde-escuro)] bg-white">
             {categorias.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+            {abasExistentes.map(a => <option key={a} value={a}>{abaLabel(a)} (aba)</option>)}
+            <option value={NOVA_ABA}>+ Criar nova aba…</option>
           </select>
         </div>
       </div>
+      {criandoAba && (
+        <Input label="Nome da nova aba" value={novaAba} onChange={(e) => setNovaAba(e.target.value)} placeholder="Ex: Briefing" />
+      )}
       {erro && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">{erro}</p>}
       <Btn onClick={salvar} disabled={saving || !nome || !driveUrl}>
         {saving ? "Salvando..." : done ? <><Check size={13} /> Salvo!</> : <><Plus size={13} /> Adicionar documento</>}
@@ -952,7 +971,11 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
       <div className="space-y-4">
         <Card>
           <SectionTitle>Adicionar documento</SectionTitle>
-          <DriveArquivoForm clienteId={clienteId} subcategoriasExecutivo={data.profile.subcategorias_executivo ?? []} />
+          <DriveArquivoForm
+            clienteId={clienteId}
+            subcategoriasExecutivo={data.profile.subcategorias_executivo ?? []}
+            abasExistentes={Array.from(new Set(data.arquivos.filter(a => isAba(a.categoria)).map(a => a.categoria)))}
+          />
         </Card>
 
         {docs.length > 0 && (
@@ -974,7 +997,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
                 <div key={a.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                   <div>
                     <p className="text-sm font-medium">{a.nome}</p>
-                    <p className="text-xs text-[var(--muted-foreground)]">{a.categoria} · {new Date(a.created_at).toLocaleDateString("pt-BR")}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{categoriaLabel(a.categoria)} · {new Date(a.created_at).toLocaleDateString("pt-BR")}</p>
                     {a.descricao && <p className="text-xs text-[var(--muted-foreground)] italic">{a.descricao}</p>}
                   </div>
                   <div className="flex gap-2">

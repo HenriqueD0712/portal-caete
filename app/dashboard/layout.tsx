@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
 import { getUserData } from "@/src/lib/cache";
 import { redirect } from "next/navigation";
+import { abaLabel, abaSlug, isAba } from "@/src/config/abas";
 
 export default async function DashboardLayout({
   children,
@@ -21,9 +22,17 @@ export default async function DashboardLayout({
       .single()).data
   );
 
+  // Abas de documentos criadas pelo admin (ex: "Briefing") → itens do menu.
+  const categorias = await getUserData(user.id, token, "layout-abas", async (sb) =>
+    ((await sb.from("arquivos").select("categoria").eq("cliente_id", user.id)).data ?? []) as { categoria: string }[]
+  );
+  const abas = Array.from(new Set(categorias.map((c) => c.categoria).filter(isAba)))
+    .map((c) => ({ label: abaLabel(c), href: `/dashboard/documentos/${abaSlug(abaLabel(c))}` }));
+
   return (
     <div className="flex min-h-screen bg-[var(--creme)]">
       <Sidebar
+        abas={abas}
         nomeProjeto={profile?.nome_projeto ?? undefined}
         nome={profile?.nome ?? undefined}
         subcategoriasExecutivo={(profile as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? []}
