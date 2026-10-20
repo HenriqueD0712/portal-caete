@@ -66,6 +66,32 @@ function parseMoney(s: string): number {
 
 const norm = (s: string | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
 
+// Chave sem acento/maiúscula/pontos para comparar nomes de ambiente ("A.S." = "a s").
+const fold = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.\s]+/g, " ").trim();
+
+// Apelidos usados na planilha -> nome oficial do filtro.
+const AMBIENTE_APELIDOS: Record<string, string[]> = {
+  "a s": ["Área de Serviço"],
+  "banheiro suite": ["BWC Suíte"],
+  "banheiro suite master": ["BWC Suíte Master"],
+  "banheiro hospedes": ["BWC Hóspedes"],
+  // "Todos" / "Todos os Ambientes": item geral, aparece só na visão "Todos" (sem filtro próprio).
+  todos: [],
+  "todos os ambientes": [],
+};
+
+const TODOS_BWC = "BWCs"; // expandido para todos os "BWC ..." da planilha
+
+// "Cozinha, A.S., Lavabo e Banheiro Suíte" ou "Cozinha/Varanda" -> lista de ambientes.
+function splitAmbientes(raw: string): string[] {
+  return raw
+    .split(/\s*(?:\/|,|;|\s+e\s+)\s*/i)
+    .map((a) => a.trim())
+    .filter(Boolean)
+    .flatMap((a) => AMBIENTE_APELIDOS[fold(a)] ?? [a]);
+}
+
 export async function fetchOrcamento(sheetUrl: string): Promise<OrcamentoItem[]> {
   if (!sheetUrl) return [];
   let text: string;
@@ -101,10 +127,22 @@ export async function fetchOrcamento(sheetUrl: string): Promise<OrcamentoItem[]>
       imageUrl: norm(r[3]),
       valorTotal: parseMoney(r[4] ?? ""),
       ambienteRaw,
-      ambientes: ambienteRaw ? ambienteRaw.split("/").map((a) => a.trim()).filter(Boolean) : [],
+      ambientes: Array.from(new Set(splitAmbientes(ambienteRaw))),
       link: norm(r[7]),
       categoria,
     });
+  }
+
+  // "BWCs" = todos os banheiros "BWC ..." existentes na planilha.
+  const bwcs = Array.from(
+    new Set(items.flatMap((i) => i.ambientes).filter((a) => a.startsWith("BWC ")))
+  );
+  if (bwcs.length > 0) {
+    for (const i of items) {
+      if (i.ambientes.includes(TODOS_BWC)) {
+        i.ambientes = Array.from(new Set(i.ambientes.flatMap((a) => (a === TODOS_BWC ? bwcs : [a]))));
+      }
+    }
   }
   return items;
 }

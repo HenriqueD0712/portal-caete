@@ -38,7 +38,7 @@ function Card({ i }: { i: OrcamentoItem }) {
         {i.ambienteRaw && (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur px-2.5 py-1 text-xs font-medium text-[var(--verde-escuro)] shadow">
             <MapPin size={12} className="text-[var(--terracota)]" />
-            {i.ambienteRaw}
+            {i.ambientes.join(" · ") || i.ambienteRaw}
           </span>
         )}
       </div>
@@ -104,7 +104,7 @@ function CardLista({ i }: { i: OrcamentoItem }) {
           {i.ambienteRaw && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--creme-escuro)] px-2.5 py-1 text-xs font-medium text-[var(--verde-escuro)]">
               <MapPin size={12} className="text-[var(--terracota)]" />
-              {i.ambienteRaw}
+              {i.ambientes.join(" · ") || i.ambienteRaw}
             </span>
           )}
           <h4 className="text-base font-semibold leading-snug text-[var(--foreground)]">{i.item}</h4>
