@@ -15,21 +15,24 @@ export function OrcamentoSection({
   const [aberto, setAberto] = useState(true);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <button
         onClick={() => setAberto((v) => !v)}
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-3 w-full text-left rounded-2xl bg-[var(--verde-escuro)] px-5 py-4 shadow-md hover:bg-[var(--verde-medio)] transition-colors"
         aria-expanded={aberto}
       >
-        <Package size={16} className="text-[var(--verde-escuro)] shrink-0" />
-        <h2 className="text-sm font-semibold text-[var(--verde-escuro)] uppercase tracking-wide">
-          {title}
-        </h2>
-        <span className="ml-auto flex items-center gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
+          <Package size={20} className="text-white" />
+        </span>
+        <span className="min-w-0">
+          <h2 className="font-display text-xl font-semibold text-white leading-tight">{title}</h2>
+          <p className="text-xs text-white/70">{items.length} itens do projeto</p>
+        </span>
+        <span className="ml-auto flex items-center gap-1 text-xs font-medium text-white/80">
           {aberto ? "Recolher" : "Expandir"}
           <ChevronDown
-            size={16}
-            className={`text-[var(--verde-escuro)] transition-transform ${aberto ? "" : "-rotate-90"}`}
+            size={18}
+            className={`text-white transition-transform ${aberto ? "" : "-rotate-90"}`}
           />
         </span>
       </button>
