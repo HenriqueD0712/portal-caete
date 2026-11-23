@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/sidebar";
 export const dynamic = "force-dynamic";
 import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
 import { getUserData } from "@/src/lib/cache";
+import { getSecoesOcultas } from "@/src/lib/portal-config";
 import { redirect } from "next/navigation";
 import { abaLabel, abaSlug, isAba } from "@/src/config/abas";
 
@@ -29,10 +30,13 @@ export default async function DashboardLayout({
   const abas = Array.from(new Set(categorias.map((c) => c.categoria).filter(isAba)))
     .map((c) => ({ label: abaLabel(c), href: `/dashboard/documentos/${abaSlug(abaLabel(c))}` }));
 
+  const ocultas = await getSecoesOcultas(user.id);
+
   return (
     <div className="flex min-h-screen bg-[var(--creme)]">
       <Sidebar
         abas={abas}
+        ocultas={ocultas}
         nomeProjeto={profile?.nome_projeto ?? undefined}
         nome={profile?.nome ?? undefined}
         subcategoriasExecutivo={(profile as { subcategorias_executivo?: string[] } | null)?.subcategorias_executivo ?? []}

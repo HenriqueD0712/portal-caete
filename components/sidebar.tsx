@@ -30,7 +30,9 @@ export function Sidebar({
   nome,
   subcategoriasExecutivo = [],
   abas = [],
+  ocultas = [],
 }: {
+  ocultas?: string[];
   nomeProjeto?: string;
   nome?: string;
   subcategoriasExecutivo?: string[];
@@ -79,7 +81,7 @@ export function Sidebar({
       {/* Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
         {navigationSections.map((section, idx) => {
-          const items = section.items.map((item) => {
+          const items = section.items.filter((item) => !ocultas.includes(item.id)).map((item) => {
             if (item.isDynamic && item.id === "executivo") {
               return {
                 ...item,

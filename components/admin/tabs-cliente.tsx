@@ -17,6 +17,7 @@ import {
   saveCuidado, updateCuidado, deleteCuidado,
   changeClientPassword, reorderPanoramas,
 } from "@/app/admin/actions";
+import { VisibilidadeCard, Link360Card } from "@/components/admin/visibilidade-cards";
 import { ABA_PREFIX, abaLabel, abaSlug, categoriaLabel, isAba } from "@/src/config/abas";
 
 // ── Types ──────────────────────────────────────────────────
@@ -35,6 +36,7 @@ type ReuniaoAgendada = { id: string; data_reuniao: string; horario: string; moda
 type Cuidado = { id: string; material: string; descricao: string; ordem: number };
 
 type ClientData = {
+  config?: { secoes_ocultas: string[]; link360_token: string | null; link360_ativo: boolean } | null;
   profile: Profile;
   arquivos: Arquivo[];
   panoramas: Arquivo[];
@@ -441,6 +443,8 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
               : <><Upload size={13} /> {destaqueAtual ? "Trocar imagem" : "Selecionar imagem"}</>}
           </Btn>
         </Card>
+
+        <VisibilidadeCard clienteId={clienteId} ocultasIniciais={data.config?.secoes_ocultas ?? []} />
 
         <CardAlterarSenha />
       </div>
@@ -1625,7 +1629,7 @@ export function TabsCliente({ clienteId, initialData }: { clienteId: string; ini
 
   const tabComponents: Record<string, React.ReactNode> = {
     perfil: <TabPerfil />,
-    midias3d: <><TabPanoramas /><div className="mt-6"><TabVisual3D /></div></>,
+    midias3d: <><div className="mb-6"><Link360Card clienteId={clienteId} token={data.config?.link360_token ?? null} ativo={data.config?.link360_ativo ?? false} /></div><TabPanoramas /><div className="mt-6"><TabVisual3D /></div></>,
     planilhas: <TabPlanilhas />,
     executivo_subs: <TabExecutivoSubs />,
     arquivos: <TabArquivos />,

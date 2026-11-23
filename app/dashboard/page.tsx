@@ -1,5 +1,6 @@
 import { getCachedUser, getCachedAccessToken } from "@/src/lib/supabase/user";
 import { getUserData } from "@/src/lib/cache";
+import { getSecoesOcultas } from "@/src/lib/portal-config";
 import Link from "next/link";
 import {
   FileText, Calendar, Eye, Building2,
@@ -26,6 +27,8 @@ function formatDate(d: string | null | undefined) {
 export default async function DashboardPage() {
   const user = await getCachedUser();
   const token = await getCachedAccessToken();
+  const ocultas = await getSecoesOcultas(user!.id);
+  const cardsVisiveis = navCards.filter((c) => !ocultas.includes(c.id));
 
   const { profile, aprovacoes, cronograma, destaque, agenda } = await getUserData(
     user!.id, token, "dashboard-home", async (sb) => {
@@ -211,7 +214,7 @@ export default async function DashboardPage() {
 
         {/* Mobile: lista vertical elegante */}
         <div className="sm:hidden bg-white rounded-2xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
-          {navCards.map(({ id, label, href, icon: Icon, desc }) => (
+          {cardsVisiveis.map(({ id, label, href, icon: Icon, desc }) => (
             <Link key={id} href={href}
               className="flex items-center gap-4 px-5 py-4 active:bg-[var(--creme)] transition-colors">
               <div className="w-11 h-11 rounded-xl bg-[var(--creme-escuro)] flex items-center justify-center shrink-0">
@@ -228,7 +231,7 @@ export default async function DashboardPage() {
 
         {/* Desktop: grid */}
         <div className="hidden sm:grid grid-cols-3 gap-3">
-          {navCards.map(({ id, label, href, icon: Icon, desc }) => (
+          {cardsVisiveis.map(({ id, label, href, icon: Icon, desc }) => (
             <Link key={id} href={href}
               className="group bg-white rounded-xl border border-[var(--border)] p-4 hover:border-[var(--terracota)] hover:shadow-md transition-all duration-200 flex flex-col gap-3">
               <div className="w-10 h-10 rounded-lg bg-[var(--creme-escuro)] flex items-center justify-center group-hover:bg-[var(--terracota)] transition-colors duration-200">

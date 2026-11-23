@@ -5,6 +5,8 @@ import { createClient } from "@/src/lib/supabase/server";
 import { deleteFile, deleteAllClientFiles } from "@/src/lib/r2";
 import { bustUserCache } from "@/src/lib/cache";
 import { usernameToEmail } from "@/src/config/auth";
+import { navigation } from "@/src/config/navigation";
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { ADMIN_EMAIL } from "./config";
 
@@ -58,6 +60,40 @@ export async function changeClientPassword(id: string, password: string) {
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(id, { password });
   if (error) throw new Error(error.message);
+}
+
+// ── VISIBILIDADE + LINK SECRETO DO 360° ────────────────────
+// Define quais menus ficam escondidos do cliente (lista de ids do navigation.ts).
+export async function setSecoesOcultas(clienteId: string, ocultas: string[]) {
+  await checkAdmin();
+  const validos = new Set(navigation.map((n) => n.id));
+  const lista = Array.from(new Set(ocultas)).filter((id) => validos.has(id));
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("portal_config")
+    .upsert({ cliente_id: clienteId, secoes_ocultas: lista }, { onConflict: "cliente_id" });
+  if (error) return { error: `Não foi possível salvar: ${error.message}` };
+  bustUserCache(clienteId);
+  revalidatePath(`/admin/clientes/${clienteId}`);
+  revalidatePath("/dashboard", "layout");
+  return { ok: true };
+}
+
+// Liga/desliga o link secreto do 360° e/ou gera um código novo (invalida o QR Code antigo).
+export async function setLink360(clienteId: string, opts: { ativo?: boolean; regenerar?: boolean }) {
+  await checkAdmin();
+  const admin = createAdminClient();
+  const { data: atual } = await admin
+    .from("portal_config").select("link360_token").eq("cliente_id", clienteId).maybeSingle();
+
+  const patch: { cliente_id: string; link360_ativo?: boolean; link360_token?: string } = { cliente_id: clienteId };
+  if (opts.ativo !== undefined) patch.link360_ativo = opts.ativo;
+  if (opts.regenerar || !atual?.link360_token) patch.link360_token = randomBytes(16).toString("hex");
+
+  const { error } = await admin.from("portal_config").upsert(patch, { onConflict: "cliente_id" });
+  if (error) return { error: `Não foi possível salvar: ${error.message}` };
+  revalidatePath(`/admin/clientes/${clienteId}`);
+  return { ok: true };
 }
 
 export async function adminToggleBloqueio(id: string, bloqueado: boolean, clienteId: string) {

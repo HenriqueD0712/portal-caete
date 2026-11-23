@@ -76,7 +76,7 @@ export async function getAllClients() {
 export async function getClientData(id: string) {
   await checkAdmin();
   const admin = createAdminClient();
-  const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados, reunioesAgendadas] = await Promise.all([
+  const [profile, arquivos, panoramas, cronograma, progresso, aprovacoes, reunioes, cuidados, reunioesAgendadas, config] = await Promise.all([
     admin.from("profiles").select("*").eq("id", id).single(),
     admin.from("arquivos").select("*").eq("cliente_id", id).neq("categoria", "panorama").order("created_at", { ascending: false }),
     admin.from("arquivos").select("*").eq("cliente_id", id).eq("categoria", "panorama").order("ordem", { ascending: true }).order("created_at", { ascending: false }),
@@ -86,8 +86,10 @@ export async function getClientData(id: string) {
     admin.from("reunioes").select("*").eq("cliente_id", id).order("data_reuniao", { ascending: false }),
     admin.from("cuidados").select("*").eq("cliente_id", id).order("ordem"),
     admin.from("reunioes_agendadas").select("*").eq("cliente_id", id).order("data_reuniao").order("horario"),
+    admin.from("portal_config").select("secoes_ocultas, link360_token, link360_ativo").eq("cliente_id", id).maybeSingle(),
   ]);
   return {
+    config: config.data as { secoes_ocultas: string[]; link360_token: string | null; link360_ativo: boolean } | null,
     profile: profile.data,
     arquivos: arquivos.data ?? [],
     panoramas: panoramas.data ?? [],
